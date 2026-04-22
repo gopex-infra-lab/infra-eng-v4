@@ -1,4 +1,13 @@
-- hosts: fastapi
+- hosts: all
   become: true
+
   roles:
-    - app_fastapi
+    - role: ssh_setup
+      when: bootstrap
+
+    - role: bootstrap
+      when: bootstrap
+
+    - role: common
+
+    - role: app_fastapi

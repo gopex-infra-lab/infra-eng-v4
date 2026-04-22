@@ -49,8 +49,8 @@
     state: started
     enabled: true
 
-- name: Add gomg to docker group
+- name: Add "{{ app_user }}" to docker group
   user:
-    name: gomg
+    name: "{{ app_user }}"
     groups: docker
     append: yes

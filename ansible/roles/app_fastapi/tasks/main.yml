@@ -1,52 +1,106 @@
+# - name: Ensure .ssh directory exists
+  # file:
+    # path: /home/gomg/.ssh
+    # state: directory
+    # owner: gomg
+    # group: gomg
+    # mode: '0700'
 - name: Ensure .ssh directory exists
   file:
-    path: /home/gomg/.ssh
+    path: "/home/{{ app_user }}/.ssh"
     state: directory
-    owner: gomg
-    group: gomg
-    mode: '0700'
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0700"
 
-- name: Add GitHub private key
-  copy:
-    src: /home/gomg/.ssh/id_ed25519_github
-    dest: /home/gomg/.ssh/id_ed25519_github
-    #content: "{{ github_private_key }}"
-    owner: gomg
-    group: gomg
-    mode: '0600'
+- name: Show key fingerprint on remote
+  become_user: "{{ app_user }}"
+  shell: ssh-keygen -lf /home/{{ app_user }}/.ssh/id_ed25519_github
+  register: remote_key
+
+- debug:
+    var: remote_key.stdout
+
+- name: Fix SSH permissions (after key exists)
+  file:
+    path: "/home/{{ app_user }}/.ssh"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    recurse: yes
 
 - name: Configure SSH for GitHub
   copy:
-    dest: /home/gomg/.ssh/config
+    dest: "/home/{{ app_user }}/.ssh/config"
     content: |
       Host github.com
-        IdentityFile ~/.ssh/id_ed25519_github
+        IdentityFile /home/{{ app_user }}/.ssh/id_ed25519_github
         IdentitiesOnly yes
-    owner: gomg
-    group: gomg
-    mode: '0600'
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0600"
 
 - name: Add GitHub to known_hosts
+  become_user: "{{ app_user }}"
   known_hosts:
     name: github.com
     key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
-    path: /home/gomg/.ssh/known_hosts
+    path: "/home/{{ app_user }}/.ssh/known_hosts"
 
 - name: Create app directory
   file:
     path: /opt/app
     state: directory
-    owner: gomg
-    group: gomg
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
 
-- name: Clone repo
+- name: Install git (bootstrap, universal)
+  raw: |
+    if command -v dnf >/dev/null 2>&1; then
+      sudo dnf install -y git
+    elif command -v yum >/dev/null 2>&1; then
+      sudo yum install -y git
+    elif command -v apt-get >/dev/null 2>&1; then
+      sudo apt-get update && sudo apt-get install -y git
+    else
+      echo "No supported package manager found" && exit 1
+    fi
+
+- name: Create git SSH wrapper
+  copy:
+    dest: "/home/{{ app_user }}/.ssh/git_ssh.sh"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0700"
+    content: |
+      #!/bin/sh
+      exec ssh -i /home/{{ app_user }}/.ssh/id_ed25519_github \
+        -o IdentitiesOnly=yes \
+        -o StrictHostKeyChecking=no \
+        "$@"
+
+- name: Clone repo (forced SSH command)
+  become: true
+  become_user: "{{ app_user }}"
   git:
     repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v3.git"
     dest: /opt/app
     version: main
-  become_user: gomg
+    accept_hostkey: yes
+    key_file: "/home/{{ app_user }}/.ssh/id_ed25519_github"
+
+- name: Add user to docker group
+  raw: sudo usermod -aG docker {{ app_user }}
 
 - name: Deploy containers (idempotent)
   community.docker.docker_compose_v2:
     project_src: /opt/app/docker
     build: policy
+
+- name: Check API health
+  uri:
+    url: "http://localhost:8000/health"
+    method: GET
+  register: health
+  retries: 5
+  delay: 3
+  until: health.status == 200

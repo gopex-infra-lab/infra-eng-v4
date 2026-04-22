@@ -72,7 +72,7 @@ jobs:
             echo "INV=inventory/core.ini" >> $GITHUB_OUTPUT
           elif [ "${{ github.event.inputs.environment }}" = "aws" ]; then
             echo "DIR=aws" >> $GITHUB_OUTPUT
-            echo "INV=none" >> $GITHUB_OUTPUT
+            echo "INV=inventory/aws.ini" >> $GITHUB_OUTPUT
           else
             echo "DIR=lab" >> $GITHUB_OUTPUT
             echo "INV=inventory/lab.ini" >> $GITHUB_OUTPUT
@@ -106,8 +106,29 @@ jobs:
         run: |
           mkdir -p ansible/files
           printf "%s\n" "${{ secrets.GIT_PRIVATE_KEY }}" > ansible/files/id_ed25519_github
-      
+          chmod 600 ansible/files/id_ed25519_github
+
+      - name: Place infra SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf "%s\n" "${{ secrets.INFRA_PRIVATE_KEY }}" > ~/.ssh/id_ed25519_infra
+          chmod 600 ~/.ssh/id_ed25519_infra
+
+      - name: Generate AWS inventory
+        if: steps.env.outputs.DIR == 'aws'
+        run: |
+          IP=$(terraform -chdir=aws output -raw ec2_public_ip)
+
+          mkdir -p ansible/inventory
+
+          cat <<EOF > ansible/inventory/aws.ini
+          [aws]
+          ec2 ansible_host=$IP ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/id_ed25519_infra ansible_python_interpreter=/usr/bin/python3 ansible_become=true
+
+          [aws:vars]
+          app_user=ec2-user
+          EOF
+
       - name: Run Ansible
-        if: (github.event_name == 'push' || github.event.inputs.action == 'apply') && steps.env.outputs.INV != 'none'
         working-directory: ansible
-        run: ansible-playbook site.yml -i ${{ steps.env.outputs.INV }}
+        run: ansible-playbook site.yml -i ${{ steps.env.outputs.INV }} -e env=${{ github.event.inputs.environment }}
