@@ -1,4 +1,18 @@
 - hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Wait for SSH port
+      wait_for:
+        host: "{{ ansible_host | default(inventory_hostname) }}"
+        port: 22
+        timeout: 300
+
+    - name: Wait for SSH to be ready
+      wait_for_connection:
+        timeout: 300
+
+- hosts: all
   become: true
 
   roles:
