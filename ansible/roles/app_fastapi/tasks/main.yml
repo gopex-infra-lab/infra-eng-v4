@@ -13,9 +13,6 @@
     group: "{{ app_user }}"
     mode: "0700"
 
-- debug:
-    var: remote_key.stdout
-
 - name: Fix SSH permissions (after key exists)
   file:
     path: "/home/{{ app_user }}/.ssh"
