@@ -26,7 +26,7 @@
     group: "{{ app_user }}"
     mode: "0600"
   when:
-    - not github_key.stat.exists
+    #- not github_key.stat.exists
     - github_private_key is defined
 
 - name: Configure SSH for GitHub
