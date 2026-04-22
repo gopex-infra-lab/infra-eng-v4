@@ -1,3 +1,8 @@
+- name: Check if GitHub key exists
+  stat:
+    path: "/home/{{ app_user }}/.ssh/id_ed25519_github"
+  register: github_key
+
 - name: Ensure .ssh directory exists
   file:
     path: "/home/{{ app_user }}/.ssh"
@@ -13,6 +18,12 @@
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
     mode: "0600"
+  when: not github_key.stat.exists
+
+- name: Show key fingerprint on remote
+  become_user: "{{ app_user }}"
+  shell: ssh-keygen -lf /home/{{ app_user }}/.ssh/id_ed25519_github
+  when: github_key.stat.exists
 
 - name: Add GitHub to known_hosts
   become_user: "{{ app_user }}"
