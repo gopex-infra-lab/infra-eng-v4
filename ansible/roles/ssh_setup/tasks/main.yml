@@ -25,9 +25,9 @@
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
     mode: "0600"
-  when:
+  #when:
     #- not github_key.stat.exists
-    - github_private_key is defined
+    #- github_private_key is defined
 
 - name: Configure SSH for GitHub
   copy:
