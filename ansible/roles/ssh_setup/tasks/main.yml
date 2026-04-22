@@ -11,13 +11,6 @@
     path: "/home/{{ app_user }}/.ssh/id_ed25519_github"
   register: github_key
 
-- name: Fail if key is missing and no source provided
-  fail:
-    msg: "GitHub key missing and no key provided to install it"
-  when:
-    - not github_key.stat.exists
-    - github_private_key is not defined
-
 - name: Install GitHub private key
   copy:
     src: id_ed25519_github
@@ -26,6 +19,13 @@
     group: "{{ app_user }}"
     mode: "0600"
   when: not github_key.stat.exists
+
+- name: Fail if key is missing and no source provided
+  fail:
+    msg: "GitHub key missing and no key provided to install it"
+  when:
+    - not github_key.stat.exists
+    - github_private_key is not defined
 
 - name: Configure SSH for GitHub
   copy:
