@@ -13,11 +13,6 @@
     group: "{{ app_user }}"
     mode: "0700"
 
-- name: Show key fingerprint on remote
-  become_user: "{{ app_user }}"
-  shell: ssh-keygen -lf /home/{{ app_user }}/.ssh/id_ed25519_github
-  register: remote_key
-
 - debug:
     var: remote_key.stdout
 
