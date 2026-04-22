@@ -21,10 +21,8 @@
 
   roles:
     - role: ssh_setup
-      when: bootstrap
 
     - role: bootstrap
-      when: bootstrap
 
     - role: common
 
