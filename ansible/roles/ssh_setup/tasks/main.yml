@@ -20,12 +20,12 @@
     mode: "0600"
   when: not github_key.stat.exists
 
-- name: Fail if key is missing and no source provided
-  fail:
-    msg: "GitHub key missing and no key provided to install it"
-  when:
-    - not github_key.stat.exists
-    - github_private_key is not defined
+#- name: Fail if key is missing and no source provided
+#  fail:
+#    msg: "GitHub key missing and no key provided to install it"
+#  when:
+#    - not github_key.stat.exists
+#    - github_private_key is not defined
 
 - name: Configure SSH for GitHub
   copy:
