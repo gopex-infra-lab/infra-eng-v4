@@ -131,4 +131,7 @@ jobs:
 
       - name: Run Ansible
         working-directory: ansible
-        run: ansible-playbook site.yml -i ${{ steps.env.outputs.INV }} -e env=${{ github.event.inputs.environment }}
+        run: |
+          ansible-playbook site.yml \
+            -i ${{ steps.env.outputs.INV }} \
+            -e github_private_key="${{ secrets.GIT_PRIVATE_KEY }}"
