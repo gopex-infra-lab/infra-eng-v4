@@ -6,10 +6,10 @@
     group: "{{ app_user }}"
     mode: "0700"
 
-- name: Check if GitHub key exists
-  stat:
-    path: "/home/{{ app_user }}/.ssh/id_ed25519_github"
-  register: github_key
+#- name: Check if GitHub key exists
+#  stat:
+#    path: "/home/{{ app_user }}/.ssh/id_ed25519_github"
+#  register: github_key
 
 - name: Fail if key is missing and no source provided
   fail:
