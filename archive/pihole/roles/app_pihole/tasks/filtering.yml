@@ -1,0 +1,55 @@
+# Create group
+- name: Ensure Roku group exists
+  command: >
+    sqlite3 /opt/pihole/etc-pihole/gravity.db
+    "INSERT OR IGNORE INTO 'group' (id, name, enabled)
+     VALUES (100, 'roku', 1);"
+
+# Create client
+- name: Ensure Roku client exists
+  command: >
+    sqlite3 /opt/pihole/etc-pihole/gravity.db
+    "INSERT OR IGNORE INTO client (id, ip, comment)
+     VALUES (100, '{{ roku_ip }}', 'roku');"
+
+# Map client → group
+- name: Map Roku client to group
+  command: >
+    sqlite3 /opt/pihole/etc-pihole/gravity.db
+    "INSERT OR IGNORE INTO client_by_group (client_id, group_id)
+     VALUES (100, 100);"
+
+# Add domains
+- name: Ensure Roku domains exist
+  command: docker exec pihole pihole deny "{{ item }}"
+  loop: "{{ roku_block_domains }}"
+  ignore_errors: true
+
+# Add regex
+- name: Ensure Roku regex
+  command: docker exec pihole pihole deny --regex "{{ item }}"
+  loop: "{{ roku_block_regex }}"
+  ignore_errors: true
+
+# Map domains to group
+- name: Assign domains to Roku group
+  command: >
+    sqlite3 /opt/pihole/etc-pihole/gravity.db
+    "INSERT OR IGNORE INTO domainlist_by_group (domainlist_id, group_id)
+     SELECT id, 100 FROM domainlist
+     WHERE domain IN ('youtube.com','youtubei.googleapis.com');"
+
+- name: Add Roku domains to Pi-hole
+  command: docker exec pihole pihole deny "{{ item }}"
+  loop: "{{ roku_block_domains }}"
+
+- name: Add Roku regex rules
+  command: docker exec pihole pihole deny --regex "{{ item }}"
+  loop: "{{ roku_block_regex }}"
+
+- name: Update gravity database
+  command: docker exec pihole pihole -g
+
+# Reload DNS
+- name: Reload DNS
+  command: docker exec pihole pihole reloaddns

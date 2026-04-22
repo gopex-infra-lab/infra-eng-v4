@@ -1,0 +1,19 @@
+#cloud-config
+hostname: ${hostname}
+
+users:
+  - name: gomg
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ${infra_public_key}
+
+ssh_pwauth: false
+disable_root: true
+
+package_update: true
+package_upgrade: false
+
+packages:
+  - python3

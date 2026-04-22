@@ -1,0 +1,5 @@
+- name: Configure network baseline
+  import_tasks: network.yml
+
+- name: Configure apt
+  import_tasks: apt.yml

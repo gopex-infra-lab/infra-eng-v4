@@ -1,0 +1,4 @@
+- hosts: fastapi
+  become: true
+  roles:
+    - app_fastapi

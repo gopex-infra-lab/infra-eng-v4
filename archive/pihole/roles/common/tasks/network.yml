@@ -1,0 +1,26 @@
+- name: Fix hostname resolution in /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1 {{ inventory_hostname }}"
+    state: present
+  
+- name: Disable systemd-resolved
+  systemd:
+    name: systemd-resolved
+    state: stopped
+    enabled: false
+
+- name: Remove existing resolv.conf
+  file:
+    path: /etc/resolv.conf
+    state: absent
+
+- name: Set static resolv.conf (bootstrap DNS)
+  copy:
+    dest: /etc/resolv.conf
+    content: |
+      nameserver 192.168.0.252
+    owner: gomg
+    group: gomg
+    mode: '0644'

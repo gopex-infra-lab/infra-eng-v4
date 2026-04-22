@@ -1,0 +1,12 @@
+pihole_ip: 192.168.0.201
+opnsense_ip: 192.168.0.252
+
+roku_ip: 192.168.0.53
+
+# Start minimal
+roku_block_domains:
+  - youtube.com
+  - youtubei.googleapis.com
+
+roku_block_regex:
+  - '(^|\.)youtube\.com$'

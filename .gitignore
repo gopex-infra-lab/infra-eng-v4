@@ -1,0 +1,38 @@
+# Terraform state files
+*.tfstate
+*.tfstate.*
+.terraform/
+!terraform.tfstate
+terraform.tfstate.backup
+
+# Terraform crash logs
+crash.log
+
+# Terraform variable files
+terraform.tfvars
+!terraform.tfvars.example
+!terraform.auto.tfvars
+#*.tfvars
+#*.tfvars.json
+
+# Local override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Sensitive environment files
+.env
+modules/vm/generated/*.yml
+
+# macOS / Linux junk
+
+# SSH keys
+.ssh/
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.pem
+ansible/group_vars/secrets.yml
+ansible/files/id_ed25519_github

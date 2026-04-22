@@ -1,0 +1,5 @@
+- name: Install sqlite3 (Pi-hole only)
+  apt:
+    name: sqlite3
+    state: present
+  when: ansible_distribution == "Ubuntu"
