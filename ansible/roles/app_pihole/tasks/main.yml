@@ -1,0 +1,50 @@
+- name: Create Pi-hole directory
+  file:
+    path: /opt/pihole
+    state: directory
+    owner: gomg
+    group: gomg
+    mode: '0755'
+
+- import_tasks: deps.yml
+
+- name: Stop existing Pi-hole container (if exists)
+  command: docker stop pihole
+  ignore_errors: true
+
+- name: Remove existing Pi-hole container (if exists)
+  command: docker rm pihole
+  ignore_errors: true
+
+- name: Run Pi-hole container (Ansible-managed)
+  community.docker.docker_container:
+    name: pihole
+    image: pihole/pihole:latest
+    state: started
+    restart_policy: unless-stopped
+    network_mode: host
+    env:
+      TZ: "America/Montreal"
+#      DNS1: "{{ opnsense_ip }}"
+#      DNS2: "no"
+      FTLCONF_dns_upstreams: "{{ opnsense_ip }}"
+      FTLCONF_LOCAL_IPV4: "{{ pihole_ip }}"
+
+    volumes:
+      - /opt/pihole/etc-pihole:/etc/pihole
+      - /opt/pihole/etc-dnsmasq.d:/etc/dnsmasq.d
+
+    capabilities:
+      - NET_ADMIN
+    
+- name: Generate Pi-hole password
+  shell: |
+    PASS=$(openssl rand -base64 12)
+    docker exec pihole pihole -a -p "$PASS"
+    echo "$PASS" > /root/pihole_password.txt
+    chmod 600 /root/pihole_password.txt
+  args:
+    executable: /bin/bash
+
+- name: Apply per-device filtering
+  import_tasks: filtering.yml

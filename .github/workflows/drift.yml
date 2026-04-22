@@ -1,0 +1,25 @@
+name: Drift Detection
+
+on:
+  schedule:
+    - cron: "0 3 * * *"  # daily
+
+jobs:
+  drift:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Check drift (lab)
+        working-directory: lab
+        run: |
+          terraform init -input=false
+          terraform plan -detailed-exitcode || exit_code=$?
+
+          if [ "$exit_code" = "2" ]; then
+            echo "Drift detected!"
+            exit 1
+          fi

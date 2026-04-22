@@ -1,0 +1,38 @@
+#cloud-config
+hostname: ${hostname}
+
+users:
+  - name: devops
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ${infra_public_key}
+
+ssh_pwauth: false
+disable_root: true
+
+package_update: true
+package_upgrade: false
+
+write_files:
+  - path: /root/.ssh/id_ed25519
+    permissions: '0600'
+    content: |
+       REMOVED_KEY
+
+      REMOVED_KEY
+
+runcmd:
+  - [ mkdir, -p, /root/.ssh ]
+  - [ chmod, "700", /root/.ssh ]
+  - [ bash, -c, "ssh-keyscan github.com > /root/.ssh/known_hosts" ]
+  - [ chmod, "644", /root/.ssh/known_hosts ]
+  - [ bash, -c, "sleep 10" ] # Wait for cloud-init to finish network setup
+  - [ apt-get, update ]
+  - [ apt-get, install, -y, git, docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin ]
+  - [ systemctl, enable, docker ]
+  - [ systemctl, start, docker ]
+  - [ bash, -c, "sleep 5" ] # Wait for Docker to start
+  - [ git, clone, git@github.com:gomiguel82/infra-eng-lab.git, /opt/app ]
+  - [ bash, -c, "cd /opt/app/docker && docker compose up -d --build" ]

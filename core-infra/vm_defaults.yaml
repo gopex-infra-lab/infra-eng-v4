@@ -1,0 +1,6 @@
+cpu_cores: 1
+memory_mb: 1024
+ipconfig0: ip=dhcp
+template_name: Ubuntu24.04
+full_clone: false
+cicustom: user=local:snippets/docker-init.yml

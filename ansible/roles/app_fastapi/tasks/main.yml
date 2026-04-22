@@ -1,0 +1,52 @@
+- name: Ensure .ssh directory exists
+  file:
+    path: /home/gomg/.ssh
+    state: directory
+    owner: gomg
+    group: gomg
+    mode: '0700'
+
+- name: Add GitHub private key
+  copy:
+    src: /home/gomg/.ssh/id_ed25519_github
+    dest: /home/gomg/.ssh/id_ed25519_github
+    #content: "{{ github_private_key }}"
+    owner: gomg
+    group: gomg
+    mode: '0600'
+
+- name: Configure SSH for GitHub
+  copy:
+    dest: /home/gomg/.ssh/config
+    content: |
+      Host github.com
+        IdentityFile ~/.ssh/id_ed25519_github
+        IdentitiesOnly yes
+    owner: gomg
+    group: gomg
+    mode: '0600'
+
+- name: Add GitHub to known_hosts
+  known_hosts:
+    name: github.com
+    key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
+    path: /home/gomg/.ssh/known_hosts
+
+- name: Create app directory
+  file:
+    path: /opt/app
+    state: directory
+    owner: gomg
+    group: gomg
+
+- name: Clone repo
+  git:
+    repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v3.git"
+    dest: /opt/app
+    version: main
+  become_user: gomg
+
+- name: Deploy containers (idempotent)
+  community.docker.docker_compose_v2:
+    project_src: /opt/app/docker
+    build: policy

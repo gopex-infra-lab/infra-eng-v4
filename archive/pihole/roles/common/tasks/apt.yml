@@ -1,0 +1,28 @@
+- name: Wait for apt to be available
+  shell: |
+    while fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
+       || fuser /var/lib/apt/lists/lock >/dev/null 2>&1 \
+       || fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
+      sleep 2
+    done
+  changed_when: false
+
+- name: Set APT sources list (fixed mirror)
+  template:
+    src: sources.list.j2
+    dest: /etc/apt/sources.list
+
+- name: Force IPv4 for APT
+  copy:
+    dest: /etc/apt/apt.conf.d/99force-ipv4
+    content: 'Acquire::ForceIPv4 "true";'
+
+- name: Disable packagekit (avoid locks)
+  systemd:
+    name: packagekit
+    state: stopped
+    enabled: false
+
+- name: Update apt cache
+  apt:
+    update_cache: yes

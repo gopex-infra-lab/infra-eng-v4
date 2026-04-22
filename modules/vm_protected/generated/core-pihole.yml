@@ -1,0 +1,80 @@
+#cloud-config
+hostname: core-pihole
+
+users:
+  - name: gomg
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKWY5UYRS0QXOMoR8RThE0sM4eR0t0AyZgNjNvkWYUEb infra-access
+
+ssh_pwauth: false
+disable_root: true
+
+package_update: true
+package_upgrade: false
+
+write_files:
+  - path: /home/gomg/.ssh/id_ed25519_github
+    permissions: '0600'
+    owner: gomg:gomg
+    content: |
+      -----BEGIN OPENSSH PRIVATE KEY-----
+      b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+      QyNTUxOQAAACD2vzXtFC+f0lVbUiKIiNSMoiNZe7PNEqyW/+ueEHwQ5QAAAJCyDUT1sg1E
+      9QAAAAtzc2gtZWQyNTUxOQAAACD2vzXtFC+f0lVbUiKIiNSMoiNZe7PNEqyW/+ueEHwQ5Q
+      AAAEDxulZItwOWSyeCeEe3j1R7H1zBsFEGix8p40uY+Q/JqPa/Ne0UL5/SVVtSIoiI1Iyi
+      I1l7s80SrJb/654QfBDlAAAADWdpdGh1Yi1hY2Nlc3M=
+      -----END OPENSSH PRIVATE KEY-----
+
+  - path: /home/gomg/.ssh/config
+    permissions: '0600'
+    owner: gomg:gomg
+    content: |
+      Host github.com
+        IdentityFile ~/.ssh/id_ed25519_github
+        IdentitiesOnly yes
+
+write_files:
+  - path: /usr/local/bin/bootstrap.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -e
+
+      echo "=== Installing dependencies ==="
+      apt update
+      apt remove -y containerd.io
+      apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+      systemctl enable docker
+      systemctl start docker
+
+      echo "=== Creating Pi-hole directories ==="
+      mkdir -p /opt/pihole
+
+      echo "=== Writing docker-compose ==="
+      cat <<EOF > /opt/pihole/docker-compose.yml
+      version: "3"
+
+      services:
+        pihole:
+          image: pihole/pihole:latest
+          container_name: pihole
+          network_mode: host
+          environment:
+            TZ: "America/Montreal"
+            WEBPASSWORD: "admin"
+          volumes:
+            - ./etc-pihole:/etc/pihole
+            - ./etc-dnsmasq.d:/etc/dnsmasq.d
+          restart: unless-stopped
+      EOF
+
+      echo "=== Starting Pi-hole ==="
+      cd /opt/pihole
+      docker compose up -d
+
+runcmd:
+  - /usr/local/bin/bootstrap.sh
