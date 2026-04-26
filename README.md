@@ -22,9 +22,9 @@ Terraform provisions virtual machines on Proxmox, which are initialized using cl
 Post-provisioning configuration is handled by Ansible, and applications are deployed using Docker.
 
 Flow:
-
+```markdown id="fix4"
 Terraform → Proxmox VM → Cloud-init → Ansible → Docker → Application (FastAPI + PostgreSQL)
-
+```
 ---
 
 ## Repository Structure
@@ -38,7 +38,7 @@ Terraform → Proxmox VM → Cloud-init → Ansible → Docker → Application (
 ├── modules/        # Reusable Terraform modules
 ├── app/            # Sample FastAPI application
 └── .github/        # CI workflows (Terraform validation)
-
+```
 ---
 
 ## Environments
@@ -70,15 +70,16 @@ Terraform → Proxmox VM → Cloud-init → Ansible → Docker → Application (
 ## Example Workflow
 
 Provision infrastructure:
-
+```bash
 cd lab
 terraform init
 terraform apply
-
+```
 Post-provisioning (configuration + app deployment):
-
+```markdown id="fix3"
+```bash
 ansible-playbook -i inventory site.yml
-
+```
 ---
 
 ## CI / Validation
