@@ -1,6 +1,6 @@
 # Infrastructure Automation Lab (Proxmox + Terraform + Ansible + Docker)
 
-[![Terraform CI](https://github.com/gopex-infra-lab/infra-eng-lab-v4/actions/workflows/terraform.yml/badge.svg)](https://github.com/gopex-infra-lab/infra-eng-lab-v4/actions)
+[![Terraform CI](https://github.com/gopex-infra-lab/infra-eng-lab-v4/actions/workflows/terraform.yml/badge.svg)]
 
 ## Overview
 
