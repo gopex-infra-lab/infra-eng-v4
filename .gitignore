@@ -36,3 +36,4 @@ id_ed25519.pub
 *.pem
 ansible/group_vars/secrets.yml
 ansible/files/id_ed25519_github
+*.tfstate

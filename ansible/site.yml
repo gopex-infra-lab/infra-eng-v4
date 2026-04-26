@@ -1,10 +1,17 @@
 - hosts: all
   gather_facts: false
 
-  tasks:
+  tasks:  
+    - name: Add host to known_hosts
+      known_hosts:
+        name: "{{ ansible_host }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -H ' + ansible_host) }}"
+        path: "~/.ssh/known_hosts"
+
     - name: Wait for SSH port
       wait_for:
-        host: "{{ ansible_host | default(inventory_hostname) }}"
+        #host: "{{ ansible_host | default(inventory_hostname) }}"
+        host: "{{ ansible_host }}"
         port: 22
         timeout: 300
 
