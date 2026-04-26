@@ -28,7 +28,7 @@ Terraform → Proxmox VM → Cloud-init → Ansible → Docker → Application (
 ---
 
 ## Repository Structure
-
+```text
 .
 ├── ansible/        # Configuration management (roles, playbooks)
 ├── cloud-init/     # VM initialization templates
