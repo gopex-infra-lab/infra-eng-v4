@@ -1,5 +1,7 @@
 # Infrastructure Automation Lab (Proxmox + Terraform + Ansible + Docker)
 
+[![Terraform CI](https://github.com/gopex-infra-lab/infra-eng-lab-v4/actions/workflows/terraform.yml/badge.svg)](https://github.com/gopex-infra-lab/infra-eng-lab-v4/actions)
+
 ## Overview
 
 This project demonstrates Infrastructure-as-Code (IaC) and system automation by provisioning and managing virtual machines on a Proxmox cluster.
