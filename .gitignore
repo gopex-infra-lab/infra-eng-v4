@@ -1,39 +1,24 @@
-# Terraform state files
+# Terraform
 *.tfstate
 *.tfstate.*
 .terraform/
-!terraform.tfstate
-terraform.tfstate.backup
-
-# Terraform crash logs
-crash.log
-
-# Terraform variable files
 terraform.tfvars
-!terraform.tfvars.example
-!terraform.auto.tfvars
-#*.tfvars
-#*.tfvars.json
+*.tfvars
+!*.tfvars.example
 
-# Local override files
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-
-# Sensitive environment files
-.env
+# Generated files
 modules/vm/generated/*.yml
+modules/vm_protected/generated/*.yml
+!modules/vm/generated/.gitkeep
+!modules/vm_protected/generated/.gitkeep
 
-# macOS / Linux junk
-
-# SSH keys
-.ssh/
+# Secrets / keys
+.env
+.envrc
+*.pem
 id_rsa
 id_rsa.pub
 id_ed25519
 id_ed25519.pub
-*.pem
-ansible/group_vars/secrets.yml
 ansible/files/id_ed25519_github
-*.tfstate
+ansible/group_vars/secrets.yml
