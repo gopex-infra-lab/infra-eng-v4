@@ -76,7 +76,6 @@ terraform init
 terraform apply
 ```
 Post-provisioning (configuration + app deployment):
-```markdown id="fix3"
 ```bash
 ansible-playbook -i inventory site.yml
 ```
