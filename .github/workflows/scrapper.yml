@@ -19,7 +19,7 @@ jobs:
       - name: Run scraper container
         run: |
           docker run --rm \
-            -v ${{ github.workspace }}/tools/job-scraper:/app
+            -v ${{ github.workspace }}/tools/job-scraper:/app \
             -e SERPAPI_KEY=${{ secrets.SERPAPI_KEY }} \
             -e EMAIL_FROM=${{ secrets.EMAIL_FROM }} \
             -e EMAIL_TO=${{ secrets.EMAIL_TO }} \
