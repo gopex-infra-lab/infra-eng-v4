@@ -1,5 +1,7 @@
 # Infrastructure Automation Lab (Proxmox + Terraform + Ansible + Docker)
 
+Production-style infrastructure automation lab demonstrating Terraform, Ansible, Docker, and CI/CD workflows in a Proxmox-based environment.
+
 [![Deploy (Terraform + Ansible)](https://github.com/gopex-infra-lab/infra-eng-lab-v4/actions/workflows/deploy.yml/badge.svg)](https://github.com/gopex-infra-lab/infra-eng-lab-v4/actions/workflows/deploy.yml)
 
 ## Overview
