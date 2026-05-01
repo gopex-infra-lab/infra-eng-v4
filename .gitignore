@@ -22,3 +22,10 @@ id_ed25519
 id_ed25519.pub
 ansible/files/id_ed25519_github
 ansible/group_vars/secrets.yml
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Local databases
+*.db
