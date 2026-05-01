@@ -74,7 +74,7 @@
   become: true
   become_user: "{{ app_user }}"
   git:
-    repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v3.git"
+    repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v4.git"
     dest: /opt/app
     version: main
     accept_hostkey: yes

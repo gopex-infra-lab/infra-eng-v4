@@ -60,7 +60,7 @@ resource "proxmox_vm_qemu" "core" {
   boot     = "order=scsi0"
 
   lifecycle {
-    prevent_destroy = false
+    prevent_destroy = true
     ignore_changes = [
       disk
     ]

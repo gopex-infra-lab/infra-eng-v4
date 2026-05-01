@@ -1,40 +1,24 @@
-- name: Install base packages
+# ansible/roles/docker/tasks/main.yml
+
+- name: Install Docker dependencies
   apt:
     name:
+      - apt-transport-https
       - ca-certificates
       - curl
-      - gnupg
-      - lsb-release
-      - git
-    update_cache: yes
-
-- name: Create keyrings directory
-  file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: '0755'
+      - software-properties-common
+    state: present
 
 - name: Add Docker GPG key
-  shell: |
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-  args:
-    creates: /etc/apt/keyrings/docker.gpg
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
 
 - name: Add Docker repo
-  shell: |
-    echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-    https://download.docker.com/linux/ubuntu \
-    $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
-    > /etc/apt/sources.list.d/docker.list
-  args:
-    creates: /etc/apt/sources.list.d/docker.list
+  apt_repository:
+    repo: "deb https://download.docker.com/linux/ubuntu jammy stable"
 
-- name: Update apt cache
-  apt:
-    update_cache: yes
-
-- name: Install Docker packages
+- name: Install Docker
   apt:
     name:
       - docker-ce
@@ -42,15 +26,10 @@
       - containerd.io
       - docker-compose-plugin
     state: present
+    update_cache: yes
 
-- name: Ensure Docker is running
+- name: Enable Docker
   systemd:
     name: docker
+    enabled: yes
     state: started
-    enabled: true
-
-- name: Add "{{ app_user }}" to docker group
-  user:
-    name: "{{ app_user }}"
-    groups: docker
-    append: yes
