@@ -9,7 +9,7 @@ app = FastAPI()
 @app.get("/jobs")
 def get_jobs():
     #conn = sqlite3.connect("jobs.db")
-    conn = sqlite3.connect("jobs.db", check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     c = conn.cursor()
 
     c.execute("""
