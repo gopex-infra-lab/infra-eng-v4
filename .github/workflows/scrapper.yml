@@ -15,11 +15,28 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t job-scraper ./tools/job-scraper
+      
+      - name: Build Api image
+        run: docker build -t job-api -f tools/job-scraper/Dockerfile.api tools/job-scraper
+      
+      - name: Run api container
+        run: |
+          docker rm -f job-api || true
+          docker run -d \
+            --name job-api \
+            --restart unless-stopped \
+            -p 8000:8000 \
+            -u $(id -u):$(id -g) \
+            -v $HOME/job-scraper-data:/data \
+            -e DB_PATH=/data/jobs.db \
+            job-api
 
       - name: Run scraper container
         run: |
           docker run --rm \
-            -v ${{ github.workspace }}/tools/job-scraper:/app \
+            -u $(id -u):$(id -g) \
+            -v $HOME/job-scraper-data:/data \
+            -e DB_PATH=/data/jobs.db \
             -e SERPAPI_KEY=${{ secrets.SERPAPI_KEY }} \
             -e EMAIL_FROM=${{ secrets.EMAIL_FROM }} \
             -e EMAIL_TO=${{ secrets.EMAIL_TO }} \
