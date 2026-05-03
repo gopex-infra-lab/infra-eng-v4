@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 import sqlite3
+import os
+
+DB_PATH = os.getenv("DB_PATH", "/data/jobs.db")
 
 app = FastAPI()
 
