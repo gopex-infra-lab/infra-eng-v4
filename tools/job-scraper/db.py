@@ -1,6 +1,6 @@
 import sqlite3
 
-DB_NAME = "jobs.db"
+DB_NAME = os.getenv("DB_PATH", "jobs.db")
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)

@@ -20,7 +20,8 @@ jobs:
         run: docker build -t job-api -f tools/job-scraper/Dockerfile.api tools/job-scraper
       
       - name: Run api container
-        run : |
+        run: |
+          docker rm -f job-api || true
           docker run -d \
             --name job-api \
             --restart unless-stopped \
