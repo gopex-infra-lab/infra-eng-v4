@@ -11,6 +11,8 @@ import re
 import os
 from db import init_db, insert_job
 
+DB_NAME = os.getenv("DB_PATH", "jobs.db")
+
 # =========================
 # CONFIG
 # =========================
