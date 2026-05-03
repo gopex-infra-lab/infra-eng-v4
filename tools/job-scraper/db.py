@@ -1,3 +1,4 @@
+import os
 import sqlite3
 
 DB_NAME = os.getenv("DB_PATH", "jobs.db")
