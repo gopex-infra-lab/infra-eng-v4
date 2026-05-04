@@ -21,11 +21,14 @@ EMAIL_TO = os.getenv("EMAIL_TO")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 QUERIES = [
-    "Systems Administrator Montreal",
-    "DevOps Engineer Montreal",
-    "SRE Montreal",
-    "Platform Engineer Montreal",
-    "Infrastructure Engineer Montreal"
+    "DevOps Engineer Canada",
+    "Site Reliability Engineer Canada",
+    "Platform Engineer Canada",
+    "Infrastructure Engineer Canada",
+    "Linux Engineer Montreal",
+    "CI CD Engineer Canada",
+    "Production Engineer Canada",
+    "Systems Engineer Linux Montreal"
 ]
 
 # --- Cloud intensity ---
@@ -107,7 +110,6 @@ ROLE_WEIGHTS = {
 }
 
 ROLE_TYPES = {
-    "cloud_heavy": ["aws", "azure", "gcp", "eks", "lambda", "cloud"],
     "hybrid_devops": ["terraform", "ci", "cd", "docker", "ansible"],
     "platform_sre": ["sre", "site reliability", "observability", "on-call"],
     "sysadmin_modern": ["linux", "network", "infrastructure", "vmware", "proxmox"],
@@ -196,6 +198,15 @@ def classify_domain(url):
 # =========================
 # SCORING
 # =========================
+def is_cloud_heavy(text: str) -> bool:
+    cloud_signals = ["aws", "azure", "gcp", "eks", "lambda", "cloud"]
+    devops_signals = ["terraform", "docker", "ci", "cd", "ansible", "kubernetes"]
+
+    has_cloud = any(x in text for x in cloud_signals)
+    has_devops = any(x in text for x in devops_signals)
+
+    return has_cloud and not has_devops
+
 def classify_role(text):
     text = text.lower()
     scores = {}
@@ -457,8 +468,10 @@ def main():
 
         score, matched, role_type, c_score = score_job(combined_text)
 
-        # define helper flag AFTER scoring
         is_sysadmin = role_type == "sysadmin_modern"
+        is_cloud = is_cloud_heavy(combined_text)
+
+        cloud_hits = sum(1 for x in ["aws", "azure", "gcp", "cloud"] if x in combined_text)
 
         # reject unknown roles (but allow devops signals)
         if role_type == "unknown":
@@ -471,19 +484,30 @@ def main():
         if "devops" in combined_text and is_senior(combined_text):
             continue
 
+        # only override role_type if weak classification
+        if is_cloud and role_type == "unknown":
+            role_type = "cloud_heavy"
+
         # -------------------------
         # SCORING ADJUSTMENTS
         # -------------------------
 
-        # infra bias (your target)
+        if is_cloud:
+            score -= 3
+
         if any(x in combined_text for x in [
-            "linux", "infrastructure", "unix", "network"
+            "linux", "unix", "infrastructure", "systems engineer"
         ]):
             score += 4
 
-        # devops signals
         if any(x in combined_text for x in [
             "docker", "ci/cd", "terraform", "ansible"
+        ]):
+            score += 3
+
+        # reward hybrid roles
+        if not is_cloud and any(x in combined_text for x in [
+            "terraform", "docker", "ci", "cd"
         ]):
             score += 2
 
@@ -499,7 +523,7 @@ def main():
             score -= 4
             matched.append("senior_penalty")
 
-        # light cloud penalty
+        # additional cloud penalty if heavy
         if cloud_hits >= 2:
             score -= 2
 
