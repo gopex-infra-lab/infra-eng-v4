@@ -26,17 +26,12 @@
 - hosts: all
   become: true
   roles:
-    - role: ssh_setup
-    - role: bootstrap
-    - role: docker
-    - role: common
-    - role: app_fastapi
+    - ssh_setup
+    - bootstrap
+    - docker
+    - common
 
 - hosts: fastapi
   become: true
   roles:
-    - role: ssh_setup
-    - role: bootstrap
-    - role: docker
-    - role: common
-    - role: app_fastapi
+    - app_fastapi
