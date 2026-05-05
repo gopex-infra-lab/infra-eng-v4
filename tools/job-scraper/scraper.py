@@ -388,9 +388,9 @@ def main():
     scored_jobs = []
 
     query_groups = [
-        ["DevOps Engineer Montreal Canada", "Junior DevOps Engineer Canada"],
-        ["Application Support Engineer Montreal Canada", "Production Support Engineer Montreal Canada"],
-        ["Linux System Administrator Montreal Canada", "Systems Engineer Montreal Canada"]
+        ["DevOps Engineer Canada", "Junior DevOps Engineer Canada"],
+        ["Application Support Engineer Canada", "Production Support Engineer Canada"],
+        ["Linux System Administrator Canada", "Systems Engineer Canada"]
     ]
 
     day_index = datetime.now().day % len(query_groups)
