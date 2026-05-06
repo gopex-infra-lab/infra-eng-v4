@@ -1,10 +1,3 @@
-# - name: Ensure .ssh directory exists
-  # file:
-    # path: /home/gomg/.ssh
-    # state: directory
-    # owner: gomg
-    # group: gomg
-    # mode: '0700'
 - name: Ensure .ssh directory exists
   file:
     path: "/home/{{ app_user }}/.ssh"
@@ -44,6 +37,16 @@
     state: directory
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
+
+- name: Create .env file
+  copy:
+    dest: /opt/app/.env
+    content: |
+      POSTGRES_DB={{ postgres_db }}
+      POSTGRES_USER={{ postgres_user }}
+      POSTGRES_PASSWORD={{ postgres_password }}
+    owner: "{{ app_user }}"
+    mode: '0600'
 
 - name: Install git (bootstrap, universal)
   raw: |
