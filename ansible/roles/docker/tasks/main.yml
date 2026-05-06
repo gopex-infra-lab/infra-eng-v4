@@ -18,6 +18,24 @@
   apt_repository:
     repo: "deb https://download.docker.com/linux/ubuntu jammy stable"
 
+- name: Wait for apt lock
+  shell: |
+    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+      sleep 5
+    done
+
+- name: Fix broken dpkg
+  command: dpkg --configure -a
+  ignore_errors: yes
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  register: apt_update
+  retries: 5
+  delay: 10
+  until: apt_update is succeeded
+
 - name: Install Docker
   apt:
     name:
