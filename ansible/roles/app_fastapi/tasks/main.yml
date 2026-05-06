@@ -130,7 +130,7 @@
 - name: Copy app source
   copy:
     src: /opt/src/infra-eng-lab/app/
-    dest: /opt/app
+    dest: /opt/app/app
     remote_src: yes
 
 - name: Add user to docker group
