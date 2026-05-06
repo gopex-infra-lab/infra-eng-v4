@@ -134,4 +134,14 @@ jobs:
 
       - name: Run Ansible
         working-directory: ansible
-        run: ansible-playbook site.yml -i ${{ steps.env.outputs.INV }} -e env=${{ github.event.inputs.environment }}
+        env:
+          POSTGRES_DB: labdb
+          POSTGRES_USER: lab
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          ansible-playbook site.yml \
+            -i ${{ steps.env.outputs.INV }} \
+            -e env=${{ github.event.inputs.environment }} \
+            -e postgres_db=$POSTGRES_DB \
+            -e postgres_user=$POSTGRES_USER \
+            -e postgres_password=$POSTGRES_PASSWORD
