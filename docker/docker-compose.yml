@@ -23,7 +23,7 @@ services:
 
   api:
     build:
-      context: ../../app
+      context: ./app
     container_name: fastapi_lab
     restart: unless-stopped
 
