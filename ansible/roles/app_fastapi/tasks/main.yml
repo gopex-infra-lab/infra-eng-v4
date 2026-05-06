@@ -86,12 +86,12 @@
     path: /opt/app
     state: absent
 
-- name: Recreate runtime directory
-  file:
-    path: /opt/app
-    state: directory
-    owner: "{{ app_user }}"
-    mode: '0755'
+#- name: Recreate runtime directory
+#  file:
+#    path: /opt/app
+#    state: directory
+#    owner: "{{ app_user }}"
+#    mode: '0755'
 
 - name: Ensure runtime directory exists
   file:
@@ -136,8 +136,6 @@
 - name: Add user to docker group
   raw: sudo usermod -aG docker {{ app_user }}
 
-- name: Verify runtime structure
-  command: bash -lc "ls -la /opt/app && echo '---' && ls -la /opt/app/app"
 
 - name: Deploy containers (idempotent)
   community.docker.docker_compose_v2:
