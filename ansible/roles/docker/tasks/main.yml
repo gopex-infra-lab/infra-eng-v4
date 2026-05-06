@@ -18,14 +18,22 @@
   apt_repository:
     repo: "deb https://download.docker.com/linux/ubuntu jammy stable"
 
-- name: Wait for apt lock
+- name: Wait for apt lock to be released
   shell: |
     while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
       sleep 5
     done
 
-- name: Fix broken dpkg
+- name: Wait for unattended-upgrades to finish
+  shell: |
+    while systemctl is-active --quiet unattended-upgrades; do
+      sleep 5
+    done
+  ignore_errors: yes
+
+- name: Fix broken dpkg state
   command: dpkg --configure -a
+  become: true
   ignore_errors: yes
 
 - name: Update apt cache
