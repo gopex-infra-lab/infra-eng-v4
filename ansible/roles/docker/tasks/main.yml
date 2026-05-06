@@ -25,12 +25,20 @@
     done
   changed_when: false
 
-- name: Wait for unattended-upgrades to finish
-  shell: |
-    while systemctl is-active --quiet unattended-upgrades; do
-      sleep 5
-    done
-  ignore_errors: yes
+- name: Disable unattended upgrades
+  systemd:
+    name: unattended-upgrades
+    enabled: false
+    state: stopped
+
+- name: Disable apt timers
+  systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop:
+    - apt-daily.timer
+    - apt-daily-upgrade.timer
 
 - name: Fix broken dpkg state
   command: dpkg --configure -a
