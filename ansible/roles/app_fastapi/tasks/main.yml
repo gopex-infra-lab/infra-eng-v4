@@ -126,7 +126,7 @@
 
 - name: Deploy containers (idempotent)
   community.docker.docker_compose_v2:
-    project_src: /opt/app/docker
+    project_src: /opt/app
     build: policy
 
 - name: Check API health
