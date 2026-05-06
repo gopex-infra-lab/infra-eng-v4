@@ -77,6 +77,8 @@
   file:
     path: /opt/src
     state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
     mode: '0755'
 
 - name: Ensure runtime directory exists
@@ -85,6 +87,15 @@
     state: directory
     owner: "{{ app_user }}"
     mode: '0755'
+
+# 2. (Recovery) Fix ownership if previously created as root
+- name: Fix ownership of /opt/src
+  file:
+    path: /opt/src
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    recurse: yes
+  when: fix_src_permissions | default(true)
 
 - name: Clone repo (forced SSH command)
   become: true
@@ -95,6 +106,8 @@
     version: dev
     accept_hostkey: yes
     key_file: "/home/{{ app_user }}/.ssh/id_ed25519_github"
+  become: true
+  become_user: "{{ app_user }}"
 
 - name: Copy docker-compose
   copy:
