@@ -81,6 +81,18 @@
     group: "{{ app_user }}"
     mode: '0755'
 
+- name: Clean runtime directory
+  file:
+    path: /opt/app
+    state: absent
+
+- name: Recreate runtime directory
+  file:
+    path: /opt/app
+    state: directory
+    owner: "{{ app_user }}"
+    mode: '0755'
+
 - name: Ensure runtime directory exists
   file:
     path: /opt/app
