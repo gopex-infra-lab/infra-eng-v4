@@ -81,10 +81,10 @@
     group: "{{ app_user }}"
     mode: '0755'
 
-- name: Clean runtime directory
-  file:
-    path: /opt/app
-    state: absent
+#- name: Clean runtime directory
+#  file:
+#    path: /opt/app
+#    state: absent
 
 #- name: Recreate runtime directory
 #  file:
