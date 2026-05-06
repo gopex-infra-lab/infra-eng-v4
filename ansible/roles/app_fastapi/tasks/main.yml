@@ -73,15 +73,40 @@
         -o StrictHostKeyChecking=no \
         "$@"
 
+- name: Ensure source directory exists
+  file:
+    path: /opt/src
+    state: directory
+    mode: '0755'
+
+- name: Ensure runtime directory exists
+  file:
+    path: /opt/app
+    state: directory
+    owner: "{{ app_user }}"
+    mode: '0755'
+
 - name: Clone repo (forced SSH command)
   become: true
   become_user: "{{ app_user }}"
   git:
     repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v4.git"
-    dest: /opt/app
-    version: main
+    dest: /opt/src/infra-eng-lab
+    version: dev
     accept_hostkey: yes
     key_file: "/home/{{ app_user }}/.ssh/id_ed25519_github"
+
+- name: Copy docker-compose
+  copy:
+    src: /opt/src/infra-eng-lab/docker/fastapi/docker-compose.yml
+    dest: /opt/app/docker-compose.yml
+    remote_src: yes
+
+- name: Copy app source
+  copy:
+    src: /opt/src/infra-eng-lab/app/
+    dest: /opt/app/app/
+    remote_src: yes
 
 - name: Add user to docker group
   raw: sudo usermod -aG docker {{ app_user }}
