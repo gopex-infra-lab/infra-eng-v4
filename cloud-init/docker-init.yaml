@@ -30,9 +30,4 @@ runcmd:
   - [ chmod, "644", /root/.ssh/known_hosts ]
   - [ bash, -c, "sleep 10" ] # Wait for cloud-init to finish network setup
   - [ apt-get, update ]
-  - [ apt-get, install, -y, git, docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin ]
-  - [ systemctl, enable, docker ]
-  - [ systemctl, start, docker ]
-  - [ bash, -c, "sleep 5" ] # Wait for Docker to start
-  - [ git, clone, git@github.com:gomiguel82/infra-eng-lab.git, /opt/app ]
-  - [ bash, -c, "cd /opt/app/docker && docker compose up -d --build" ]
+  - [ bash, -c, "sleep 10" ] # Wait for apt update to finish  
