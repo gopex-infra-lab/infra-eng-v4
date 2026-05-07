@@ -31,6 +31,25 @@ Terraform → Proxmox VM → Cloud-init → Ansible → Docker → Application (
 ```
 ---
 
+## Database Persistence & Backup
+
+The FastAPI application uses PostgreSQL as a stateful service, deployed via Docker Compose.
+
+### Persistence Model
+
+- PostgreSQL data is stored in a named Docker volume (`fastapi_postgres_data`)
+- Data persists across container restarts and recreations
+- Volume is managed by Docker and mounted at `/var/lib/postgresql/data`
+
+This ensures application state is retained independently of container lifecycle.
+
+### Backup
+
+Manual backup can be performed using:
+
+```bash
+docker exec postgres_lab pg_dump -U <user> <db> > /opt/backups/postgres/backup.sql
+
 ## Repository Structure
 ```text
 .

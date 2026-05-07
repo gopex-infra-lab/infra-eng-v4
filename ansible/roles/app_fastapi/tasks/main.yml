@@ -58,6 +58,13 @@
     recurse: yes
   when: fix_src_permissions | default(true)
 
+- name: Create backup directory
+  file:
+    path: /opt/backups/postgres
+    state: directory
+    owner: "{{ app_user }}"
+    mode: "0755"
+
 - name: Clone repo (forced SSH command)
   become: true
   become_user: "{{ app_user }}"
