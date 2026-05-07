@@ -25,17 +25,6 @@
     group: "{{ app_user }}"
     recurse: yes
 
-#- name: Install git (bootstrap, universal)
-#  raw: |
-#    if command -v dnf >/dev/null 2>&1; then
-#      sudo dnf install -y git
-#    elif command -v yum >/dev/null 2>&1; then
-#      sudo yum install -y git
-#    elif command -v apt-get >/dev/null 2>&1; then
-#      sudo apt-get update && sudo apt-get install -y git
-#    else
-#      echo "No supported package manager found" && exit 1
-#    fi
 - name: Install git (bootstrap, universal)
   package:
     name: git
