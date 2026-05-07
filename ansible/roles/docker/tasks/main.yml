@@ -1,5 +1,4 @@
 # ansible/roles/docker/tasks/main.yml
-
 - name: Install Docker dependencies
   apt:
     name:
