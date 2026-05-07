@@ -9,3 +9,41 @@
       - ca-certificates
     state: present
     update_cache: yes
+
+- name: Ensure .ssh directory exists
+  file:
+    path: "/home/{{ app_user }}/.ssh"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0700"
+
+- name: Fix SSH permissions (after key exists)
+  file:
+    path: "/home/{{ app_user }}/.ssh"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    recurse: yes
+
+#- name: Install git (bootstrap, universal)
+#  raw: |
+#    if command -v dnf >/dev/null 2>&1; then
+#      sudo dnf install -y git
+#    elif command -v yum >/dev/null 2>&1; then
+#      sudo yum install -y git
+#    elif command -v apt-get >/dev/null 2>&1; then
+#      sudo apt-get update && sudo apt-get install -y git
+#    else
+#      echo "No supported package manager found" && exit 1
+#    fi
+- name: Install git (bootstrap, universal)
+  package:
+    name: git
+    state: present
+  
+- name: Add GitHub to known_hosts
+  become_user: "{{ app_user }}"
+  known_hosts:
+    name: github.com
+    key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
+    path: "/home/{{ app_user }}/.ssh/known_hosts"
