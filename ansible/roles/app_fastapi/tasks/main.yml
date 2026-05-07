@@ -1,18 +1,3 @@
-- name: Ensure .ssh directory exists
-  file:
-    path: "/home/{{ app_user }}/.ssh"
-    state: directory
-    owner: "{{ app_user }}"
-    group: "{{ app_user }}"
-    mode: "0700"
-
-- name: Fix SSH permissions (after key exists)
-  file:
-    path: "/home/{{ app_user }}/.ssh"
-    owner: "{{ app_user }}"
-    group: "{{ app_user }}"
-    recurse: yes
-
 - name: Configure SSH for GitHub
   copy:
     dest: "/home/{{ app_user }}/.ssh/config"
@@ -23,13 +8,6 @@
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
     mode: "0600"
-
-- name: Add GitHub to known_hosts
-  become_user: "{{ app_user }}"
-  known_hosts:
-    name: github.com
-    key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
-    path: "/home/{{ app_user }}/.ssh/known_hosts"
 
 - name: Create app directory
   file:
@@ -48,30 +26,18 @@
     owner: "{{ app_user }}"
     mode: '0600'
 
-- name: Install git (bootstrap, universal)
-  raw: |
-    if command -v dnf >/dev/null 2>&1; then
-      sudo dnf install -y git
-    elif command -v yum >/dev/null 2>&1; then
-      sudo yum install -y git
-    elif command -v apt-get >/dev/null 2>&1; then
-      sudo apt-get update && sudo apt-get install -y git
-    else
-      echo "No supported package manager found" && exit 1
-    fi
-
-- name: Create git SSH wrapper
-  copy:
-    dest: "/home/{{ app_user }}/.ssh/git_ssh.sh"
-    owner: "{{ app_user }}"
-    group: "{{ app_user }}"
-    mode: "0700"
-    content: |
-      #!/bin/sh
-      exec ssh -i /home/{{ app_user }}/.ssh/id_ed25519_github \
-        -o IdentitiesOnly=yes \
-        -o StrictHostKeyChecking=no \
-        "$@"
+#- name: Create git SSH wrapper
+#  copy:
+#    dest: "/home/{{ app_user }}/.ssh/git_ssh.sh"
+#    owner: "{{ app_user }}"
+#    group: "{{ app_user }}"
+#    mode: "0700"
+#    content: |
+#      #!/bin/sh
+#      exec ssh -i /home/{{ app_user }}/.ssh/id_ed25519_github \
+#        -o IdentitiesOnly=yes \
+#        -o StrictHostKeyChecking=no \
+ #       "$@"
 
 - name: Ensure source directory exists
   file:
