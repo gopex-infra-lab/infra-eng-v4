@@ -5,3 +5,22 @@
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
     mode: "0700"
+
+- name: Fix SSH permissions (after key exists)
+  file:
+    path: "/home/{{ app_user }}/.ssh"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    recurse: yes
+
+- name: Check if GitHub key exists
+  stat:
+    path: "/home/{{ app_user }}/.ssh/id_ed25519_github"
+  register: github_key
+
+- name: Add GitHub to known_hosts
+  become_user: "{{ app_user }}"
+  known_hosts:
+    name: github.com
+    key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
+    path: "/home/{{ app_user }}/.ssh/known_hosts"
