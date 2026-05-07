@@ -1,3 +1,12 @@
+- name: Install GitHub private key
+  copy:
+    src: id_ed25519_github
+    dest: "/home/{{ app_user }}/.ssh/id_ed25519_github"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0600"
+  when: not github_key.stat.exist
+
 - name: Configure SSH for GitHub
   copy:
     dest: "/home/{{ app_user }}/.ssh/config"
