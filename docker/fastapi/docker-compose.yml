@@ -11,8 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
     volumes:
-      postgres_data:
-        name: fastapi_postgres_data
+      - postgres_data:/var/lib/postgresql/data
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -49,3 +48,4 @@ services:
 
 volumes:
   postgres_data:
+      name: fastapi_postgres_data
