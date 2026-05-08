@@ -49,7 +49,7 @@ Manual backup can be performed using:
 
 ```bash
 docker exec postgres_lab pg_dump -U <user> <db> > /opt/backups/postgres/backup.sql
-
+```
 ## Repository Structure
 ```text
 .
