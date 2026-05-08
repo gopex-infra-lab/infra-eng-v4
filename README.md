@@ -50,6 +50,10 @@ Manual backup can be performed using:
 ```bash
 docker exec postgres_lab pg_dump -U <user> <db> > /opt/backups/postgres/backup.sql
 ```
+Restoring backup can be done using:
+```bash
+cat /opt/backups/postgres/backup.sql | docker exec -i postgres_lab psql -U $POSTGRES_USER $POSTGRES_DB
+```
 ## Repository Structure
 ```text
 .
