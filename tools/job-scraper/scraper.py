@@ -230,6 +230,21 @@ ENGINEERING_SIGNALS = [
     "operational excellence",
 ]
 
+MANDATORY_INFRA_SIGNALS = [
+    "linux",
+    "terraform",
+    "ansible",
+    "docker",
+    "kubernetes",
+    "python",
+    "bash",
+    "ci/cd",
+    "infrastructure",
+    "monitoring",
+    "observability",
+    "cloud infrastructure",
+]
+
 INFRA_DEPTH_SIGNALS = [
     "linux",
     "terraform",
@@ -657,6 +672,20 @@ def main():
         # only override role_type if weak classification
         if is_cloud and role_type == "unknown":
             role_type = "cloud_heavy"
+        
+        infra_matches = sum(
+            1 for x in MANDATORY_INFRA_SIGNALS
+            if x in combined_text
+        )
+
+        # Reject weak operations/support roles
+        if role_type in [
+            "sre_adjacent_support",
+            "app_support",
+            "infra_operations"
+        ]:
+            if infra_matches < 2:
+                continue
 
         # -------------------------
         # SCORING ADJUSTMENTS
