@@ -20,16 +20,32 @@ EMAIL_FROM = os.getenv("EMAIL_FROM")
 EMAIL_TO = os.getenv("EMAIL_TO")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
-QUERIES = [
-    "DevOps Engineer Canada",
-    "Site Reliability Engineer Canada",
-    "Platform Engineer Canada",
-    "Infrastructure Engineer Canada",
-    "Linux Engineer Montreal",
-    "CI CD Engineer Canada",
-    "Production Engineer Canada",
-    "Systems Engineer Linux Montreal"
-]
+query_groups = {
+    "infra_ops": [
+        "Infrastructure Engineer Canada",
+        "Linux Systems Engineer Canada",
+        "Platform Operations Engineer Canada",
+        "Systems Engineer Linux Montreal"
+    ],
+
+    "sre_adjacent": [
+        "Production Engineer Canada",
+        "Site Reliability Engineer Canada",
+        "Technical Operations Engineer Canada"
+    ],
+
+    "modern_support": [
+        "Application Support Engineer Kubernetes",
+        "Production Support Engineer Linux",
+        "Platform Support Engineer Canada"
+    ],
+
+    "devops_transition": [
+        "DevOps Engineer Terraform Docker",
+        "Infrastructure Automation Engineer",
+        "CI CD Engineer Linux"
+    ]
+}
 
 # --- Cloud intensity ---
 CLOUD_KEYWORDS = ["aws", "azure", "gcp", "eks", "lambda", "cloudformation"]
@@ -110,18 +126,109 @@ ROLE_WEIGHTS = {
 }
 
 ROLE_TYPES = {
-    "hybrid_devops": ["terraform", "ci", "cd", "docker", "ansible"],
-    "platform_sre": ["sre", "site reliability", "observability", "on-call"],
-    "sysadmin_modern": ["linux", "network", "infrastructure", "vmware", "proxmox"],
-    "app_support": [
+    "platform_reliability": [
+        "sre",
+        "site reliability",
+        "platform",
+        "observability",
+        "incident response",
+        "reliability"
+    ],
+
+    "infra_operations": [
+        "linux",
+        "infrastructure",
+        "systems engineer",
+        "vmware",
+        "network",
+        "unix"
+    ],
+
+    "operational_devops": [
+        "terraform",
+        "ansible",
+        "docker",
+        "ci/cd",
+        "automation",
+        "pipeline"
+    ],
+
+    "sre_adjacent_support": [
         "application support engineer",
         "production support engineer",
-        "trading support",
-        "technical support engineer",
-        "systems support",
-        "operations support"
+        "technical operations",
+        "platform support engineer",
+        "operations engineer",
+        "trading support"
+    ],
+
+    "low_value_support": [
+        "desktop support",
+        "helpdesk",
+        "end-user support",
+        "call center"
     ]
 }
+
+OPERATIONS_SIGNALS = {
+    "incident response": 4,
+    "root cause analysis": 4,
+    "production systems": 5,
+    "distributed systems": 4,
+    "observability": 4,
+    "deployment pipeline": 3,
+    "on-call": 2,
+    "service reliability": 4,
+    "high availability": 3,
+    "monitoring": 3,
+    "troubleshooting": 3,
+}
+
+OBSERVABILITY = {
+    "grafana": 4,
+    "prometheus": 4,
+    "splunk": 3,
+    "elk": 3,
+    "loki": 3,
+    "monitoring": 3,
+    "logging": 2,
+    "metrics": 2,
+    "alerting": 2,
+    "tracing": 2,
+}
+
+LOW_VALUE_SUPPORT = [
+    "desktop support",
+    "helpdesk",
+    "password reset",
+    "printer support",
+    "call center",
+    "end-user support",
+    "technical support representative",
+    "customer service"
+]
+
+TOXIC_SIGNALS = [
+    "fast paced call center",
+    "high ticket volume",
+    "100+ tickets",
+    "heavy ticket queue",
+    "call metrics",
+    "phone support",
+    "customer escalation handling",
+    "remote desktop support",
+]
+
+ENGINEERING_SIGNALS = [
+    "automation",
+    "continuous improvement",
+    "infrastructure as code",
+    "root cause analysis",
+    "reliability engineering",
+    "platform engineering",
+    "deployment automation",
+    "operational excellence",
+]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
@@ -256,9 +363,28 @@ def score_job(text):
             score += weight
             if k not in matched:
                 matched.append(k)
+    
+    # Operational maturity scoring
+    for k, weight in OPERATIONS_SIGNALS.items():
+        if k in text:
+            score += weight
+            if k not in matched:
+                matched.append(k)
 
     c_score = cloud_score(text)
     role_type = classify_role(text)
+
+    # Observability scoring
+    for k, weight in OBSERVABILITY.items():
+        if k in text:
+            score += weight
+            if k not in matched:
+                matched.append(k)
+
+    # Penalize low-value support only
+    if any(x in text for x in LOW_VALUE_SUPPORT):
+        score -= 6
+        matched.append("low_value_support")
 
     # Penalize low-value support roles
     if any(x in text for x in [
@@ -278,17 +404,21 @@ def score_job(text):
         score -= 4
         matched.append("domain_penalty")
     
-    # Penalize generic support engineer roles
-    if "support engineer" in text and not any(x in text for x in [
-        "application support engineer",
-        "production support engineer"
-    ]):
-        score -= 4
-        matched.append("support_engineer_penalty")
-    
     if is_senior(text):
         score -= 4
         matched.append("senior_penalty")
+
+    # Toxic environment penalty
+    if any(x in text for x in TOXIC_SIGNALS):
+        score -= 5
+        matched.append("toxic_environment")
+
+    # Engineering culture boost
+    for k in ENGINEERING_SIGNALS:
+        if k in text:
+            score += 2
+            if k not in matched:
+                matched.append(k)
 
     score = min(score, 20)
 
@@ -387,14 +517,15 @@ def main():
     seen_titles = set()
     scored_jobs = []
 
-    query_groups = [
-        ["DevOps Engineer Canada", "Junior DevOps Engineer Canada"],
-        ["Application Support Engineer Canada", "Production Support Engineer Canada"],
-        ["Linux System Administrator Canada", "Systems Engineer Canada"]
-    ]
+    query_group_names = list(query_groups.keys())
 
-    day_index = datetime.now().day % len(query_groups)
-    active_queries = query_groups[day_index]
+    day_index = datetime.now().day % len(query_group_names)
+
+    active_group = query_group_names[day_index]
+
+    active_queries = query_groups[active_group]
+
+    print(f"[DEBUG] Active query group: {active_group}")
 
     results = []
 
@@ -452,14 +583,17 @@ def main():
         ]):
             continue
 
-        # Cloud-dominant DevOps (your strict rule)
-        cloud_hits = sum(x in combined_text for x in ["aws", "azure", "gcp"])
+        # Cloud-dominant DevOps
+        CLOUD_ARCHITECT_TERMS = [
+            "cloud architect",
+            "solutions architect",
+            "principal cloud",
+            "enterprise architect",
+            "aws architect",
+            "azure architect"
+        ]
 
-        if (
-            "devops" in combined_text
-            and cloud_hits >= 2
-            and any(x in combined_text for x in ["cloud", "kubernetes", "platform"])
-        ):
+        if any(x in combined_text for x in CLOUD_ARCHITECT_TERMS):
             continue
 
         # ==================================================
