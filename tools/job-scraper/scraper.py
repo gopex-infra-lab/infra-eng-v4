@@ -230,6 +230,22 @@ ENGINEERING_SIGNALS = [
     "operational excellence",
 ]
 
+INFRA_DEPTH_SIGNALS = [
+    "linux",
+    "terraform",
+    "ansible",
+    "docker",
+    "kubernetes",
+    "ci/cd",
+    "automation",
+    "python",
+    "bash",
+    "monitoring",
+    "observability",
+    "infrastructure",
+    "production systems",
+]
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
     "Accept-Language": "en-US,en;q=0.9",
@@ -419,6 +435,26 @@ def score_job(text):
             score += 2
             if k not in matched:
                 matched.append(k)
+    
+    infra_depth = sum(1 for x in INFRA_DEPTH_SIGNALS if x in text)
+
+    if infra_depth >= 4:
+        score += 6
+        matched.append("strong_infra_depth")
+
+    elif infra_depth <= 1:
+        score -= 5
+        matched.append("weak_infra_depth")
+    
+    if any(x in text for x in [
+        "entry-level",
+        "new graduate",
+        "graduate program",
+        "help desk",
+        "customer-facing support"
+    ]):
+        score -= 5
+        matched.append("junior_ops_penalty")
 
     score = min(score, 20)
 
