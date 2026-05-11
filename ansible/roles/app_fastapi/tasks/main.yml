@@ -112,7 +112,7 @@
 
 - name: Check API health
   uri:
-    url: "http://localhost:8000/health"
+    url: http://localhost/health
     method: GET
   register: health
   retries: 5
