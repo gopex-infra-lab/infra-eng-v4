@@ -8,6 +8,13 @@ jobs:
   drift:
     runs-on: self-hosted
 
+    env:
+      TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+      TF_VAR_pm_api_token_id: ${{ secrets.PM_API_TOKEN_ID }}
+      TF_VAR_pm_api_token_secret: ${{ secrets.PM_API_TOKEN_SECRET }}
+      TF_VAR_infra_public_key: ${{ secrets.INFRA_PUBLIC_KEY }}
+      TF_VAR_infra_private_key: ${{ secrets.INFRA_PRIVATE_KEY }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -17,7 +24,7 @@ jobs:
         working-directory: lab
         run: |
           terraform init -input=false
-          terraform plan -detailed-exitcode || exit_code=$?
+          terraform plan -input=false -detailed-exitcode || exit_code=$?
 
           if [ "$exit_code" = "2" ]; then
             echo "Drift detected!"
