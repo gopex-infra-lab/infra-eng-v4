@@ -99,6 +99,23 @@
     owner: "{{ app_user }}"
     mode: "0755"
 
+- name: Create certs directory
+  file:
+    path: /opt/app/certs
+    state: directory
+    owner: "{{ app_user }}"
+    mode: "0755"
+
+- name: Generate self-signed TLS certificate
+  command: >
+    openssl req -x509 -nodes -days 365
+    -newkey rsa:2048
+    -keyout /opt/app/certs/lab.key
+    -out /opt/app/certs/lab.crt
+    -subj "/CN=lab-fastapi.local"
+  args:
+    creates: /opt/app/certs/lab.crt
+  
 - name: Copy nginx configuration
   copy:
     src: /opt/src/infra-eng-lab/docker/fastapi/nginx/
@@ -110,11 +127,13 @@
     project_src: /opt/app
     build: policy
 
-- name: Check API health
+- name: Check API health through nginx HTTPS
   uri:
-    url: http://localhost/health
+    url: https://localhost/health
     method: GET
-  register: health
-  retries: 5
-  delay: 3
-  until: health.status == 200
+    status_code: 200
+    validate_certs: false
+  retries: 10
+  delay: 5
+  register: api_health
+  until: api_health.status == 200

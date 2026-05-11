@@ -54,6 +54,15 @@ Restoring backup can be done using:
 ```bash
 cat /opt/backups/postgres/backup.sql | docker exec -i postgres_lab psql -U $POSTGRES_USER $POSTGRES_DB
 ```
+
+## Reverse Proxy
+
+The FastAPI application is exposed via an Nginx reverse proxy.
+
+- Nginx listens on port 80
+- Routes traffic to the FastAPI container (internal network)
+- Application container is not exposed directly
+
 ## Repository Structure
 ```text
 .
