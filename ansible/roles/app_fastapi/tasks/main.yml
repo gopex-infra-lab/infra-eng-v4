@@ -92,6 +92,18 @@
 - name: Add user to docker group
   raw: sudo usermod -aG docker {{ app_user }}
 
+- name: Create nginx directory
+  file:
+    path: /opt/app/nginx
+    state: directory
+    owner: "{{ app_user }}"
+    mode: "0755"
+
+- name: Copy nginx configuration
+  copy:
+    src: /opt/src/infra-eng-lab/docker/fastapi/nginx/
+    dest: /opt/app/nginx/
+    remote_src: yes
 
 - name: Deploy containers (idempotent)
   community.docker.docker_compose_v2:
