@@ -38,7 +38,7 @@
   file:
     path: /opt/src
     state: directory
-  owner: "{{ app_user }}"
+    owner: "{{ app_user }}"
     group: "{{ app_user }}"
     mode: '0755'
 
