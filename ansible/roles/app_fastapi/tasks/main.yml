@@ -38,7 +38,7 @@
   file:
     path: /opt/src
     state: directory
-    owner: "{{ app_user }}"
+  owner: "{{ app_user }}"
     group: "{{ app_user }}"
     mode: '0755'
 
@@ -57,6 +57,29 @@
     group: "{{ app_user }}"
     recurse: yes
   when: fix_src_permissions | default(true)
+
+- name: Ensure monitoring runtime directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0755"
+  loop:
+    - /opt/app/monitoring
+    - /opt/app/monitoring/prometheus
+    - /opt/app/monitoring/grafana
+    - /opt/app/monitoring/grafana/provisioning
+    - /opt/app/monitoring/grafana/dashboards
+
+- name: Copy monitoring config into runtime
+  ansible.builtin.copy:
+    src: /opt/src/infra-eng-lab/docker/monitoring/
+    dest: /opt/app/monitoring/
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: preserve
+    remote_src: true
 
 - name: Create backup directory
   file:
