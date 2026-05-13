@@ -58,7 +58,7 @@
     recurse: yes
   when: fix_src_permissions | default(true)
 
-- name: Ensure monitoring runtime directories exist
+-- name: Ensure monitoring runtime directories exist
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -70,16 +70,24 @@
     - /opt/app/monitoring/prometheus
     - /opt/app/monitoring/grafana
     - /opt/app/monitoring/grafana/provisioning
+    - /opt/app/monitoring/grafana/provisioning/datasources
+    - /opt/app/monitoring/grafana/provisioning/dashboards
     - /opt/app/monitoring/grafana/dashboards
 
-- name: Copy monitoring config into runtime
-  ansible.builtin.copy:
+- name: Synchronize monitoring config into runtime
+  ansible.posix.synchronize:
     src: /opt/src/infra-eng-lab/docker/monitoring/
     dest: /opt/app/monitoring/
+    recursive: true
+    delete: true
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: Set monitoring ownership
+  ansible.builtin.file:
+    path: /opt/app/monitoring
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
-    mode: preserve
-    remote_src: true
+    recurse: true
 
 - name: Create backup directory
   file:

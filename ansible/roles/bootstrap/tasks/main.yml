@@ -30,10 +30,3 @@
   package:
     name: git
     state: present
-  
-- name: Add GitHub to known_hosts
-  become_user: "{{ app_user }}"
-  known_hosts:
-    name: github.com
-    key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
-    path: "/home/{{ app_user }}/.ssh/known_hosts"
