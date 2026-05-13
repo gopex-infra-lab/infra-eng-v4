@@ -10,6 +10,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
+    networks:
+      - app_net
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -27,6 +29,9 @@ services:
     container_name: fastapi_lab
     restart: unless-stopped
 
+    networks:
+      - app_net
+    
     depends_on:
       db:
         condition: service_healthy
@@ -47,6 +52,8 @@ services:
     image: nginx:alpine
     container_name: nginx_lab
     restart: unless-stopped
+    networks:
+      - app_net
 
     ports:
       - "80:80"
@@ -132,7 +139,7 @@ services:
 networks:
   app_net:
     driver: bridge
-    
+
 volumes:
   postgres_data:
       name: fastapi_postgres_data
