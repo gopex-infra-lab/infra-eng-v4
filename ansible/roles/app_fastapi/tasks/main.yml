@@ -31,6 +31,9 @@
       POSTGRES_DB={{ postgres_db }}
       POSTGRES_USER={{ postgres_user }}
       POSTGRES_PASSWORD={{ postgres_password }}
+      GRAFANA_ADMIN_USER={{ lookup('env', 'GRAFANA_ADMIN_USER') }}
+      GRAFANA_ADMIN_PASSWORD={{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') }}
+      APP_DOMAIN={{ lookup('env', 'APP_DOMAIN') }}
     owner: "{{ app_user }}"
     mode: '0600'
 
