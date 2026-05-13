@@ -58,7 +58,7 @@
     recurse: yes
   when: fix_src_permissions | default(true)
 
--- name: Ensure monitoring runtime directories exist
+- name: Ensure monitoring runtime directories exist
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
