@@ -72,7 +72,8 @@ services:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     networks:
-      - app_net
+      app_net:
+        driver: bridge
     security_opt:
       - no-new-privileges:true
 
@@ -92,7 +93,8 @@ services:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
-      - app_net
+      app_net:
+        driver: bridge
     depends_on:
       - prometheus
     security_opt:
@@ -108,7 +110,8 @@ services:
     volumes:
       - /:/host:ro,rslave
     networks:
-      - app_net
+      app_net:
+        driver: bridge
     security_opt:
       - no-new-privileges:true
 
@@ -125,7 +128,8 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
     networks:
-      - app_net
+      app_net:
+        driver: bridge
     security_opt:
       - no-new-privileges:true
 
