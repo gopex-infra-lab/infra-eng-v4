@@ -35,15 +35,15 @@ query_groups = {
     ],
 
     "modern_support": [
-        "Application Support Engineer Kubernetes",
-        "Production Support Engineer Linux",
+        "Application Support Engineer Kubernetes Canada",
+        "Production Support Engineer Linux Canada",
         "Platform Support Engineer Canada"
     ],
 
     "devops_transition": [
-        "DevOps Engineer Terraform Docker",
-        "Infrastructure Automation Engineer",
-        "CI CD Engineer Linux"
+        "DevOps Engineer Terraform Docker Canada",
+        "Infrastructure Automation Engineer Canada",
+        "CI CD Engineer Linux Canada"
     ]
 }
 
