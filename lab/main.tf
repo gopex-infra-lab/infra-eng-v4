@@ -30,12 +30,5 @@ resource "local_file" "ansible_inventory" {
 ${vm_name} ansible_host=${vm.ip} ansible_user=gomg
 %{endif}
 %{endfor}
-
-[pihole]
-%{for vm_name, vm in local.vm_config~}
-%{if vm.role == "pihole"}
-${vm_name} ansible_host=${vm.ip} ansible_user=gomg
-%{endif}
-%{endfor}
 EOT
 }

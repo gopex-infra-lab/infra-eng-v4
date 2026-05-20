@@ -1,0 +1,73 @@
+services:
+    # Postgres database service
+    postgres:
+        image: postgres:16
+        container_name: job-scraper-postgres
+        restart: unless-stopped
+        
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+            POSTGRES_DB: ${POSTGRES_DB}
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+
+    # FastAPI service for the job scraper API    
+    job-api:
+        build:
+            context: ../../tools/job-scraper/
+            dockerfile: Dockerfile.api
+
+        container_name: job-scraper-api
+        restart: unless-stopped
+
+        depends_on:
+            - postgres
+        
+        environment:
+            DATABASE_URL: ${DATABASE_URL}
+        ports:
+            - "8000:8000"
+        healthcheck:
+            test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    # Nginx service to reverse proxy to the FastAPI service
+    nginx:
+        image: nginx:alpine
+        container_name: job-scraper-nginx
+        restart: unless-stopped
+
+        depends_on:
+            job-api:
+                condition: service_healthy
+        
+        ports:
+            - "80:80"
+            - "443:443"
+
+    # Job scraper service that runs the scraping logic and inserts data into the database
+    scraper:
+        build:
+            context: ../../tools/job-scraper/
+            dockerfile: Dockerfile.scraper
+
+        container_name: job-scraper
+
+        depends_on:
+            - postgres
+
+        environment:
+            SERPAPI_KEY: ${SERPAPI_KEY}
+            EMAIL_FROM: ${EMAIL_FROM}
+            EMAIL_TO: ${EMAIL_TO}
+            EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+            DATABASE_URL: ${DATABASE_URL}
+
+volumes:
+    postgres_data:
+        name: job-scraper-postgres-data
