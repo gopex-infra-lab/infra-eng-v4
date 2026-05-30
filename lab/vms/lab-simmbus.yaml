@@ -1,5 +1,4 @@
 vm_name: lab-simmbus
-cores: 2
 memory_mb: 1024
 target_node: pve1
 target_node_ip: 192.168.0.253

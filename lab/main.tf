@@ -33,7 +33,7 @@ ${vm_name} ansible_host=${vm.ip} ansible_user=gomg
 
 [simmbus]
 %{for vm_name, vm in local.vm_config~}
-%{if vm.role == "simmbus"}
+%{if vm.role == "all"}
 ${vm_name} ansible_host=${vm.ip} ansible_user=gomg
 %{endif}
 %{endfor}
