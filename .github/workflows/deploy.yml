@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Block PRs to main
-      - run: |
+        run: |
           echo "Pull requests to main are not allowed. Please open a PR to dev branch."
           exit 1
   
