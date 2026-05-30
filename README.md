@@ -167,3 +167,21 @@ This project is designed to:
 
 * Sensitive data (credentials, tokens, keys) are not stored in the repository
 * Environment-specific values are managed outside version control
+
+## Prerequisites
+
+- Proxmox VE node with API token and a cloud-init-ready VM template
+- Terraform >= 1.5
+- Ansible >= 2.14 with `community.docker` collection
+- GitHub Actions self-hosted runner registered to the repo
+- SSH key pair for infrastructure access
+
+## How It Works
+
+All provisioning runs through GitHub Actions — there is no local Terraform or Ansible execution required.
+
+1. Trigger the **Deploy** workflow manually via `workflow_dispatch`, selecting environment (`lab`, `core`, `aws`) and action (`plan`, `apply`, `destroy`)
+2. Terraform provisions VMs on Proxmox (or EC2 for `aws`) and generates the Ansible inventory automatically
+3. Ansible configures the VMs and deploys the Docker stack
+
+Required GitHub Actions secrets are listed in `.tfvars.example`.
