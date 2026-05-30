@@ -30,3 +30,8 @@ variable "infra_private_key" {
   sensitive = true
   default   = null
 }
+
+variable "ansible_user" {
+  description = "Ansible user for SSH connections"
+  type        = string
+}

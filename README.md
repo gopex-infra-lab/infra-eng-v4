@@ -26,8 +26,8 @@ Terraform provisions virtual machines on Proxmox, which are initialized using cl
 Post-provisioning configuration is handled by Ansible, and applications are deployed using Docker.
 
 Flow:
-```markdown id="fix4"
-Terraform → Proxmox VM → Cloud-init → Ansible → Docker → Application (FastAPI + PostgreSQL)
+```
+Terraform → Proxmox VM → Cloud-init → Ansible → Docker → Application (FastAPI + PostgreSQL + Nginx) + Monitoring (Prometheus + Grafana)
 ```
 ---
 
@@ -63,12 +63,25 @@ The FastAPI application is exposed via an Nginx reverse proxy.
 - Routes traffic to the FastAPI container (internal network)
 - Application container is not exposed directly
 
+## Monitoring
+
+The stack includes a full observability layer deployed via Docker Compose:
+
+- **Prometheus** — scrapes metrics from node-exporter and cAdvisor
+- **Grafana** — dashboards provisioned via config files (no manual setup)
+- **node-exporter** — host-level metrics (CPU, memory, disk, network)
+- **cAdvisor** — per-container resource usage metrics
+
+All services run on the internal `app_net` network and are not directly exposed.
+
 ## Repository Structure
 ```text
 .
 ├── ansible/        # Configuration management (roles, playbooks)
 ├── cloud-init/     # VM initialization templates
 ├── docker/         # Application deployment (docker-compose)
+│   ├── fastapi/    # App + Nginx + Prometheus + Grafana
+│   └── monitoring/ # Prometheus and Grafana config
 ├── lab/            # Application infrastructure environment
 ├── core-infra/     # Shared infrastructure (base services)
 ├── modules/        # Reusable Terraform modules

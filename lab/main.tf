@@ -27,14 +27,14 @@ resource "local_file" "ansible_inventory" {
 [fastapi]
 %{for vm_name, vm in local.vm_config~}
 %{if vm.role == "fastapi"}
-${vm_name} ansible_host=${vm.ip} ansible_user=gomg
+${vm_name} ansible_host=${vm.ip} ansible_user=${var.ansible_user}
 %{endif}
 %{endfor}
 
 [all]
 %{for vm_name, vm in local.vm_config~}
 %{if vm.role == "all"}
-${vm_name} ansible_host=${vm.ip} ansible_user=gomg
+${vm_name} ansible_host=${vm.ip} ansible_user=${var.ansible_user}
 %{endif}
 %{endfor}
 EOT
