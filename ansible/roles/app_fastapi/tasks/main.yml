@@ -31,6 +31,9 @@
       POSTGRES_DB={{ postgres_db }}
       POSTGRES_USER={{ postgres_user }}
       POSTGRES_PASSWORD={{ postgres_password }}
+      GRAFANA_ADMIN_USER={{ lookup('env', 'GRAFANA_ADMIN_USER') }}
+      GRAFANA_ADMIN_PASSWORD={{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') }}
+      APP_DOMAIN={{ lookup('env', 'APP_DOMAIN') }}
     owner: "{{ app_user }}"
     mode: '0600'
 
@@ -77,6 +80,37 @@
   become: true
   become_user: "{{ app_user }}"
 
+- name: Ensure monitoring runtime directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0755"
+  loop:
+    - /opt/app/monitoring
+    - /opt/app/monitoring/prometheus
+    - /opt/app/monitoring/grafana
+    - /opt/app/monitoring/grafana/provisioning
+    - /opt/app/monitoring/grafana/provisioning/datasources
+    - /opt/app/monitoring/grafana/provisioning/dashboards
+    - /opt/app/monitoring/grafana/dashboards
+
+- name: Synchronize monitoring config into runtime
+  ansible.posix.synchronize:
+    src: /opt/src/infra-eng-lab/docker/monitoring/
+    dest: /opt/app/monitoring/
+    recursive: true
+    delete: true
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: Set monitoring ownership
+  ansible.builtin.file:
+    path: /opt/app/monitoring
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    recurse: true
+
 - name: Copy docker-compose
   copy:
     src: /opt/src/infra-eng-lab/docker/fastapi/docker-compose.yml
@@ -92,17 +126,48 @@
 - name: Add user to docker group
   raw: sudo usermod -aG docker {{ app_user }}
 
+- name: Create nginx directory
+  file:
+    path: /opt/app/nginx
+    state: directory
+    owner: "{{ app_user }}"
+    mode: "0755"
+
+- name: Create certs directory
+  file:
+    path: /opt/app/certs
+    state: directory
+    owner: "{{ app_user }}"
+    mode: "0755"
+
+- name: Generate self-signed TLS certificate
+  command: >
+    openssl req -x509 -nodes -days 365
+    -newkey rsa:2048
+    -keyout /opt/app/certs/lab.key
+    -out /opt/app/certs/lab.crt
+    -subj "/CN=lab-fastapi.local"
+  args:
+    creates: /opt/app/certs/lab.crt
+  
+- name: Copy nginx configuration
+  copy:
+    src: /opt/src/infra-eng-lab/docker/fastapi/nginx/
+    dest: /opt/app/nginx/
+    remote_src: yes
 
 - name: Deploy containers (idempotent)
   community.docker.docker_compose_v2:
     project_src: /opt/app
     build: policy
 
-- name: Check API health
+- name: Check API health through nginx HTTPS
   uri:
-    url: "http://localhost:8000/health"
+    url: https://localhost/health
     method: GET
-  register: health
-  retries: 5
-  delay: 3
-  until: health.status == 200
+    status_code: 200
+    validate_certs: false
+  retries: 10
+  delay: 5
+  register: api_health
+  until: api_health.status == 200

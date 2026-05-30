@@ -1,26 +1,23 @@
 from fastapi import FastAPI
-import sqlite3
 import os
+import psycopg
 
-DB_PATH = os.getenv("DB_PATH", "/data/jobs.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 app = FastAPI()
 
 @app.get("/jobs")
 def get_jobs():
-    #conn = sqlite3.connect("jobs.db")
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    c = conn.cursor()
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT title, company, link, score, category
+                FROM jobs
+                ORDER BY score DESC
+                LIMIT 20
+            """)
 
-    c.execute("""
-    SELECT title, company, link, score, category
-    FROM jobs
-    ORDER BY score DESC
-    LIMIT 20
-    """)
-
-    rows = c.fetchall()
-    conn.close()
+            rows = cur.fetchall()
 
     return [
         {
@@ -32,3 +29,8 @@ def get_jobs():
         }
         for r in rows
     ]
+
+    
+@app.get("/health")
+def health():
+    return {"status": "Ok"}

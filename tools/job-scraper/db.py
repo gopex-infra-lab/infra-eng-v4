@@ -1,39 +1,34 @@
 import os
-import sqlite3
+import psycopg
 
-DB_NAME = os.getenv("DB_PATH", "jobs.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS jobs (
+                id SERIAL PRIMARY KEY,
+                title TEXT,
+                company TEXT,
+                link TEXT UNIQUE,
+                score INTEGER,
+                category TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """)
 
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS jobs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        company TEXT,
-        link TEXT UNIQUE,
-        score INTEGER,
-        category TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    conn.commit()
-    conn.close()
+            conn.commit()
 
 
 def insert_job(job):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-
-    try:
-        c.execute("""
-        INSERT INTO jobs (title, company, link, score, category)
-        VALUES (?, ?, ?, ?, ?)
-        """, (job["title"], job["company"], job["link"], job["score"], job["category"]))
-        conn.commit()
-    except:
-        pass  # duplicate (ignore)
-
-    conn.close()
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            try:
+                cur.execute("""
+                INSERT INTO jobs (title, company, link, score, category)
+                VALUES (%s, %s, %s, %s, %s)
+                """, (job["title"], job["company"], job["link"], job["score"], job["category"]))
+                conn.commit()
+            except:
+                pass  # duplicate (ignore)

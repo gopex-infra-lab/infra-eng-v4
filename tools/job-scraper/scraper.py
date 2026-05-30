@@ -10,8 +10,9 @@ from collections import defaultdict
 import re
 import os
 from db import init_db, insert_job
+import unicodedata
 
-DB_NAME = os.getenv("DB_PATH", "jobs.db")
+DB_NAME = os.getenv("DB_PATH", "/data/jobs.db")
 
 # =========================
 # CONFIG
@@ -20,16 +21,42 @@ EMAIL_FROM = os.getenv("EMAIL_FROM")
 EMAIL_TO = os.getenv("EMAIL_TO")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
-QUERIES = [
-    "DevOps Engineer Canada",
-    "Site Reliability Engineer Canada",
-    "Platform Engineer Canada",
-    "Infrastructure Engineer Canada",
-    "Linux Engineer Montreal",
-    "CI CD Engineer Canada",
-    "Production Engineer Canada",
-    "Systems Engineer Linux Montreal"
-]
+query_groups = {
+    "infra_ops": [
+        "Infrastructure Engineer Canada",
+        "Linux Systems Engineer Canada",
+        "Platform Operations Engineer Canada",
+        "Systems Engineer Linux Montreal"
+    ],
+
+    "sre_adjacent": [
+        "Production Engineer Canada",
+        "Site Reliability Engineer Canada",
+        "Technical Operations Engineer Canada"
+    ],
+
+    "modern_support": [
+        "Application Support Engineer Kubernetes",
+        "Production Support Engineer Linux",
+        "Platform Support Engineer Canada"
+    ],
+
+    "production_operations": [
+        "Production Support Engineer Linux Canada",
+        "Infrastructure Operations Engineer Canada",
+        "Technical Operations Engineer Montreal",
+        "Platform Operations Linux",
+        "Trading Support Engineer Montreal"
+    ],
+
+    "finance_operations": [
+        "Trading Support Engineer Montreal",
+        "Production Support Capital Markets",
+        "Linux Trading Support Canada",
+        "Front Office Support Engineer",
+        "Market Data Support Engineer"
+    ]
+}
 
 # --- Cloud intensity ---
 CLOUD_KEYWORDS = ["aws", "azure", "gcp", "eks", "lambda", "cloudformation"]
@@ -43,15 +70,15 @@ BOOST = {
     "ci": 2,
     "cd": 2,
     "network": 2,
-    "application support": 2,
-    "production support engineer": 2,
+    "application support": 6,
+    "production support engineer": 7,
 }
 
 # --- Title boost ---
 TITLE_BOOST = {
-    "devops": 5,
-    "platform engineer": 5,
-    "site reliability": 5,
+    "devops": 2,
+    "platform engineer": 2,
+    "site reliability": 2,
     "systems engineer": 4,
     "infrastructure engineer": 4,
     "system administrator": 3,
@@ -90,13 +117,22 @@ KEYWORDS = {
 }
 
 ROLE_WEIGHTS = {
-    "devops": 5,
-    "sre": 5,
-    "site reliability": 5,
-    "platform": 4,
+    "devops": 2,
+    "sre": 2,
+    "site reliability": 2,
+    "platform": 3,
     "infrastructure": 4,
-
     "cloud": 1,
+
+    "application support engineer": 6,
+    "production support engineer": 7,
+    "technical operations": 6,
+    "operations engineer": 5,
+    "platform operations": 5,
+    "infrastructure operations": 6,
+    "linux systems engineer": 6,
+    "middleware support": 5,
+    "trading support": 7,
 
     # SysAdmin tier (intentionally lower)
     "sysadmin": 4,
@@ -104,30 +140,183 @@ ROLE_WEIGHTS = {
     "it administrator": 3,
 
     "application support": 3,
-    "production support": 3,
+    "production support": 7,
     "trading support": 4,
     "support engineer": 2,
 }
 
 ROLE_TYPES = {
-    "hybrid_devops": ["terraform", "ci", "cd", "docker", "ansible"],
-    "platform_sre": ["sre", "site reliability", "observability", "on-call"],
-    "sysadmin_modern": ["linux", "network", "infrastructure", "vmware", "proxmox"],
-    "app_support": [
+    "platform_reliability": [
+        "sre",
+        "site reliability",
+        "platform",
+        "observability",
+        "incident response",
+        "reliability"
+    ],
+
+    "infra_operations": [
+        "linux",
+        "infrastructure",
+        "systems engineer",
+        "vmware",
+        "network",
+        "unix"
+    ],
+
+    "operational_devops": [
+        "terraform",
+        "ansible",
+        "docker",
+        "ci/cd",
+        "automation",
+        "pipeline"
+    ],
+
+    "sre_adjacent_support": [
         "application support engineer",
         "production support engineer",
-        "trading support",
-        "technical support engineer",
-        "systems support",
-        "operations support"
+        "technical operations",
+        "platform support engineer",
+        "operations engineer",
+        "trading support"
+    ],
+
+    "low_value_support": [
+        "desktop support",
+        "helpdesk",
+        "end-user support",
+        "call center"
     ]
 }
+
+OPERATIONS_SIGNALS = {
+    "incident response": 4,
+    "root cause analysis": 4,
+    "production systems": 5,
+    "distributed systems": 4,
+    "observability": 4,
+    "deployment pipeline": 3,
+    "on-call": 2,
+    "service reliability": 4,
+    "high availability": 3,
+    "monitoring": 3,
+    "troubleshooting": 3,
+}
+
+FINANCE_SIGNALS = {
+    "trading": 5,
+    "front office": 5,
+    "market data": 4,
+    "risk engine": 4,
+    "electronic trading": 4,
+    "capital markets": 4,
+    "fixed income": 3,
+    "low latency": 3,
+}
+
+OBSERVABILITY = {
+    "grafana": 4,
+    "prometheus": 4,
+    "splunk": 3,
+    "elk": 3,
+    "loki": 3,
+    "monitoring": 3,
+    "logging": 2,
+    "metrics": 2,
+    "alerting": 2,
+    "tracing": 2,
+}
+
+LOW_VALUE_SUPPORT = [
+    "desktop support",
+    "helpdesk",
+    "password reset",
+    "printer support",
+    "call center",
+    "end-user support",
+    "technical support representative",
+    "customer service"
+]
+
+TOXIC_SIGNALS = [
+    "fast paced call center",
+    "high ticket volume",
+    "100+ tickets",
+    "heavy ticket queue",
+    "call metrics",
+    "phone support",
+    "customer escalation handling",
+    "remote desktop support",
+]
+
+UNREALISTIC_SIGNALS = [
+    "platform ownership",
+    "enterprise cloud strategy",
+    "multi-region",
+    "multi-cloud",
+    "expert kubernetes",
+    "7+ years kubernetes",
+    "10+ years kubernetes",
+    "staff engineer",
+    "principal engineer",
+    "cloud architect",
+]
+
+ENGINEERING_SIGNALS = [
+    "automation",
+    "continuous improvement",
+    "infrastructure as code",
+    "root cause analysis",
+    "reliability engineering",
+    "platform engineering",
+    "deployment automation",
+    "operational excellence",
+]
+
+MANDATORY_INFRA_SIGNALS = [
+    "linux",
+    "terraform",
+    "ansible",
+    "docker",
+    "kubernetes",
+    "python",
+    "bash",
+    "ci/cd",
+    "infrastructure",
+    "monitoring",
+    "observability",
+    "cloud infrastructure",
+]
+
+INFRA_DEPTH_SIGNALS = [
+    "linux",
+    "terraform",
+    "ansible",
+    "docker",
+    "kubernetes",
+    "ci/cd",
+    "automation",
+    "python",
+    "bash",
+    "monitoring",
+    "observability",
+    "infrastructure",
+    "production systems",
+]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
     "Accept-Language": "en-US,en;q=0.9",
     "Connection": "keep-alive"
 }
+
+def normalize_text(value: str) -> str:
+    value = value or ""
+    value = unicodedata.normalize("NFKD", value)
+    value = "".join(c for c in value if not unicodedata.combining(c))
+    return value.lower().strip()
+
 # SerpAPI
 def search_serpapi(query):
     url = "https://serpapi.com/search"
@@ -163,6 +352,7 @@ def search_serpapi(query):
             "title": title,
             "company": job.get("company_name", ""),
             "description": job.get("description", ""),
+            "location": job.get("location", ""),
             "link": link
         })
 
@@ -256,9 +446,35 @@ def score_job(text):
             score += weight
             if k not in matched:
                 matched.append(k)
+    
+    # Operational maturity scoring
+    for k, weight in OPERATIONS_SIGNALS.items():
+        if k in text:
+            score += weight
+            if k not in matched:
+                matched.append(k)
+    
+    # Finance/HFT scoring
+    for k, weight in FINANCE_SIGNALS.items():
+        if k in text:
+            score += weight
+            if k not in matched:
+                matched.append(k)
 
     c_score = cloud_score(text)
     role_type = classify_role(text)
+
+    # Observability scoring
+    for k, weight in OBSERVABILITY.items():
+        if k in text:
+            score += weight
+            if k not in matched:
+                matched.append(k)
+
+    # Penalize low-value support only
+    if any(x in text for x in LOW_VALUE_SUPPORT):
+        score -= 6
+        matched.append("low_value_support")
 
     # Penalize low-value support roles
     if any(x in text for x in [
@@ -278,19 +494,48 @@ def score_job(text):
         score -= 4
         matched.append("domain_penalty")
     
-    # Penalize generic support engineer roles
-    if "support engineer" in text and not any(x in text for x in [
-        "application support engineer",
-        "production support engineer"
-    ]):
-        score -= 4
-        matched.append("support_engineer_penalty")
-    
     if is_senior(text):
         score -= 4
         matched.append("senior_penalty")
 
-    score = min(score, 20)
+    # Toxic environment penalty
+    if any(x in text for x in TOXIC_SIGNALS):
+        score -= 5
+        matched.append("toxic_environment")
+    
+    # Unrealistic senior/platform-heavy penalty
+    if any(x in text for x in UNREALISTIC_SIGNALS):
+        score -= 8
+        matched.append("unrealistic_role")
+
+    # Engineering culture boost
+    for k in ENGINEERING_SIGNALS:
+        if k in text:
+            score += 2
+            if k not in matched:
+                matched.append(k)
+    
+    infra_depth = sum(1 for x in INFRA_DEPTH_SIGNALS if x in text)
+
+    if infra_depth >= 4:
+        score += 6
+        matched.append("strong_infra_depth")
+
+    elif infra_depth <= 1:
+        score -= 5
+        matched.append("weak_infra_depth")
+    
+    if any(x in text for x in [
+        "entry-level",
+        "new graduate",
+        "graduate program",
+        "help desk",
+        "customer-facing support"
+    ]):
+        score -= 5
+        matched.append("junior_ops_penalty")
+
+    score = min(score, 40)
 
     return score, matched, role_type, c_score
 
@@ -387,14 +632,15 @@ def main():
     seen_titles = set()
     scored_jobs = []
 
-    query_groups = [
-        ["DevOps Engineer Canada", "Junior DevOps Engineer Canada"],
-        ["Application Support Engineer Canada", "Production Support Engineer Canada"],
-        ["Linux System Administrator Canada", "Systems Engineer Canada"]
-    ]
+    query_group_names = list(query_groups.keys())
 
-    day_index = datetime.now().day % len(query_groups)
-    active_queries = query_groups[day_index]
+    day_index = datetime.now().day % len(query_group_names)
+
+    active_group = query_group_names[day_index]
+
+    active_queries = query_groups[active_group]
+
+    print(f"[DEBUG] Active query group: {active_group}")
 
     results = []
 
@@ -412,6 +658,7 @@ def main():
         title = r.get("title", "")
         company = r.get("company", "")
         description = r.get("description", "")
+        location = r.get("location", "").lower()
         raw_url = r.get("link", "")
 
         if raw_url and raw_url.startswith("http"):
@@ -422,6 +669,39 @@ def main():
 
         if not title or len(title) < 5:
             continue
+        
+        location = normalize_text(r.get("location", ""))
+
+        ALLOWED_LOCATIONS = [
+            "canada",
+            "montreal",
+            "quebec",
+            "toronto",
+            "ontario",
+            "remote canada",
+            "hybrid canada",
+        ]
+
+        BLOCKED_LOCATIONS = [
+            "united kingdom",
+            " uk",
+            "england",
+            "bristol",
+            "india",
+            "germany",
+            "france",
+            "singapore",
+            "australia",
+        ]
+
+        if location:
+            if any(x in location for x in BLOCKED_LOCATIONS):
+                print(f"[DEBUG] Blocked foreign location: {location}")
+                continue
+
+            if not any(x in location for x in ALLOWED_LOCATIONS):
+                print(f"[DEBUG] Location filtered: {location}")
+                continue
 
         combined_text = f"{title} {company} {description}".lower()
 
@@ -452,14 +732,17 @@ def main():
         ]):
             continue
 
-        # Cloud-dominant DevOps (your strict rule)
-        cloud_hits = sum(x in combined_text for x in ["aws", "azure", "gcp"])
+        # Cloud-dominant DevOps
+        CLOUD_ARCHITECT_TERMS = [
+            "cloud architect",
+            "solutions architect",
+            "principal cloud",
+            "enterprise architect",
+            "aws architect",
+            "azure architect"
+        ]
 
-        if (
-            "devops" in combined_text
-            and cloud_hits >= 2
-            and any(x in combined_text for x in ["cloud", "kubernetes", "platform"])
-        ):
+        if any(x in combined_text for x in CLOUD_ARCHITECT_TERMS):
             continue
 
         # ==================================================
@@ -487,6 +770,19 @@ def main():
         # only override role_type if weak classification
         if is_cloud and role_type == "unknown":
             role_type = "cloud_heavy"
+        
+        infra_matches = sum(
+            1 for x in MANDATORY_INFRA_SIGNALS
+            if x in combined_text
+        )
+
+        # Reject weak operations/support roles
+        if role_type in [
+            "sre_adjacent_support",
+            "app_support"
+        ]:
+            if infra_matches < 1:
+                continue
 
         # -------------------------
         # SCORING ADJUSTMENTS

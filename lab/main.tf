@@ -31,9 +31,9 @@ ${vm_name} ansible_host=${vm.ip} ansible_user=gomg
 %{endif}
 %{endfor}
 
-[pihole]
+[all]
 %{for vm_name, vm in local.vm_config~}
-%{if vm.role == "pihole"}
+%{if vm.role == "all"}
 ${vm_name} ansible_host=${vm.ip} ansible_user=gomg
 %{endif}
 %{endfor}
