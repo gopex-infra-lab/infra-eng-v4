@@ -38,10 +38,7 @@ jobs:
     if: github.event_name == 'pull_request' && github.base_ref == 'main'
     runs-on: ubuntu-latest
     steps:
-      - name: Block PRs to main branch
-      - run: |
-          echo "Pull requests to the main branch are not allowed. Please open a PR against the dev branch instead."
-          exit 1
+      - run: exit 1
   
   deploy:
     if: |
@@ -59,8 +56,6 @@ jobs:
       GRAFANA_ADMIN_USER: ${{ secrets.GRAFANA_ADMIN_USER }}
       GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
       APP_DOMAIN: ${{ secrets.APP_DOMAIN }}
-      TF_VAR_allowed_ssh_cidr: ${{ secrets.TF_VAR_ALLOWED_SSH_CIDR }}
-      TF_VAR_ansible_user: ${{ secrets.ANSIBLE_USER }}
 
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
