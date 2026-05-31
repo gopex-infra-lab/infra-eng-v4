@@ -176,7 +176,7 @@ This project is designed to:
 - GitHub Actions self-hosted runner registered to the repo
 - SSH key pair for infrastructure access
 
-## CI / CD
+## CI / CD 
 
 All provisioning runs through GitHub Actions — there is no local Terraform or Ansible execution required.
 
