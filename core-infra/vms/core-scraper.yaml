@@ -1,6 +1,6 @@
 vm_name: core-scraper
 memory_mb: 2048
-cores: 2
+cpu_cores: 2
 disk_size_gb: 20
 target_node: pve2
 target_node_ip: 192.168.0.251
