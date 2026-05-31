@@ -176,7 +176,7 @@ This project is designed to:
 - GitHub Actions self-hosted runner registered to the repo
 - SSH key pair for infrastructure access
 
-## How It Works
+## CI / CD 
 
 All provisioning runs through GitHub Actions — there is no local Terraform or Ansible execution required.
 
@@ -185,3 +185,8 @@ All provisioning runs through GitHub Actions — there is no local Terraform or 
 3. Ansible configures the VMs and deploys the Docker stack
 
 Required GitHub Actions secrets are listed in `.tfvars.example`.
+
+### aws
+
+* Cloud environment provisioning an EC2 instance on AWS
+* Uses the same Ansible roles as lab for application deployment
