@@ -7,6 +7,13 @@
         name: "{{ ansible_host }}"
         key: "{{ lookup('pipe', 'ssh-keyscan -H ' + ansible_host) }}"
         path: "~/.ssh/known_hosts"
+    
+    - name: Create app user
+      user:
+        name: "{{ app_user }}"
+        shell: /bin/bash
+        create_home: yes
+        state: present
 
     - name: Wait for SSH port
       wait_for:
@@ -25,8 +32,8 @@
 - hosts: all
   become: true
   roles:
-    - ssh_setup
     - bootstrap
+    - ssh_setup
     - docker
     - common
 

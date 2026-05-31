@@ -11,6 +11,13 @@
     state: present
     update_cache: yes
 
+- name: Create app user
+  user:
+    name: "{{ app_user }}"
+    shell: /bin/bash
+    create_home: yes
+    state: present
+
 - name: Ensure .ssh directory exists
   file:
     path: "/home/{{ app_user }}/.ssh"

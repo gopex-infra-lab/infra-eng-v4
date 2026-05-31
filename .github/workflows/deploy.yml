@@ -60,7 +60,7 @@ jobs:
       GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
       APP_DOMAIN: ${{ secrets.APP_DOMAIN }}
       TF_VAR_allowed_ssh_cidr: ${{ secrets.TF_VAR_ALLOWED_SSH_CIDR }}
-      TF_VAR_ansible_user: ${{ secrets.ANSIBLE_USER }}
+      TF_VAR_ansible_user: ${{ secrets.TF_VAR_ANSIBLE_USER }}
 
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -154,4 +154,4 @@ jobs:
             -e postgres_db=$POSTGRES_DB \
             -e postgres_user=$POSTGRES_USER \
             -e postgres_password=$POSTGRES_PASSWORD \
-            -e app_user=${{ secrets.TF_VAR_ANSIBLE_USER }}
+            -e app_user=$TF_VAR_ansible_user
