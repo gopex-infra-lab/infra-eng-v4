@@ -10,7 +10,6 @@
 
     - name: Wait for SSH port
       wait_for:
-        #host: "{{ ansible_host | default(inventory_hostname) }}"
         host: "{{ ansible_host }}"
         port: 22
         timeout: 300
