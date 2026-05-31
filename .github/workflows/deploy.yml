@@ -140,6 +140,11 @@ jobs:
           app_user=ec2-user
           EOF
 
+      - name: Debug Ansible user
+        run: echo "ANSIBLE_USER=${ANSIBLE_USER}"
+        env:
+          ANSIBLE_USER: ${{ secrets.TF_VAR_ANSIBLE_USER }}
+
       - name: Run Ansible
         if: github.event.inputs.action != 'destroy'
         working-directory: ansible
