@@ -5,7 +5,6 @@
     name:
       - curl
       - vim
-      - git
       - ca-certificates
       - openssl
       - rsync
