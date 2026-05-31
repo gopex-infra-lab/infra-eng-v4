@@ -154,4 +154,4 @@ jobs:
             -e postgres_db=$POSTGRES_DB \
             -e postgres_user=$POSTGRES_USER \
             -e postgres_password=$POSTGRES_PASSWORD \
-            -e app_user=${{ secrets.ANSIBLE_USER }}
+            -e app_user=$ANSIBLE_USER
