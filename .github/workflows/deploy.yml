@@ -141,6 +141,7 @@ jobs:
           EOF
 
       - name: Run Ansible
+        if: github.event.inputs.action != 'destroy'
         working-directory: ansible
         env:
           POSTGRES_DB: labdb
