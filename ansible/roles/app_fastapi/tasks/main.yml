@@ -77,8 +77,6 @@
     version: dev
     accept_hostkey: yes
     key_file: "/home/{{ app_user }}/.ssh/id_ed25519_github"
-  become: true
-  become_user: "{{ app_user }}"
 
 - name: Ensure monitoring runtime directories exist
   ansible.builtin.file:
