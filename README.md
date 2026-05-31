@@ -102,6 +102,11 @@ All services run on the internal `app_net` network and are not directly exposed.
 * Shared infrastructure layer
 * Intended for foundational services (DNS, utilities, etc.)
 
+### aws
+
+* Cloud environment provisioning an EC2 instance on AWS
+* Uses the same Ansible roles as lab for application deployment
+
 ---
 
 ## Key Features
