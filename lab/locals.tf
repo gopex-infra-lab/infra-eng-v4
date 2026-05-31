@@ -12,10 +12,4 @@ locals {
     for vm in local.vm_list :
     vm.vm_name => merge(local.defaults, vm)
   }
-
-  validated_vms = {
-    for k, v in local.vm_config :
-    k => v
-    if v.cpu_cores >= 1 && v.cpu_cores <= 32
-  }
 }
