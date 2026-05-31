@@ -8,14 +8,22 @@
       - software-properties-common
     state: present
 
-#- name: Add Docker GPG key
-#  apt_key:
-#    url: https://download.docker.com/linux/ubuntu/gpg
-#    state: present
+- name: Create apt keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Add Docker GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
 
 - name: Add Docker repo
-  apt_repository:
-    repo: "deb https://download.docker.com/linux/ubuntu jammy stable"
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
+    state: present
 
 - name: Wait for apt lock to be released
   shell: |
@@ -39,6 +47,17 @@
     - apt-daily.timer
     - apt-daily-upgrade.timer
 
+- name: Wait for dpkg lock to be released
+  shell: |
+    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+          fuser /var/lib/dpkg/lock >/dev/null 2>&1 || \
+          fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
+      echo "Waiting for dpkg/apt lock..."
+      sleep 5
+    done
+  changed_when: false
+  timeout: 120
+  
 - name: Fix broken dpkg state
   command: dpkg --configure -a
   become: true

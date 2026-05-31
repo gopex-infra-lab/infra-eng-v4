@@ -15,6 +15,7 @@ jobs:
       TF_VAR_pm_api_token_secret: ${{ secrets.PM_API_TOKEN_SECRET }}
       TF_VAR_infra_public_key: ${{ secrets.INFRA_PUBLIC_KEY }}
       TF_VAR_infra_private_key: ${{ secrets.INFRA_PRIVATE_KEY }}
+      TF_VAR_ansible_user: ${{ secrets.TF_VAR_ANSIBLE_USER }}
 
     steps:
       - uses: actions/checkout@v4
@@ -29,5 +30,16 @@ jobs:
 
           if [ "$exit_code" = "2" ]; then
             echo "Drift detected!"
+            exit 1
+          fi
+
+      - name: Check drift (core-infra)
+        working-directory: core-infra
+        run: |
+          terraform init -input=false
+          terraform plan -input=false -detailed-exitcode || exit_code=$?
+
+          if [ "$exit_code" = "2" ]; then
+            echo "Drift detected in core-infra!"
             exit 1
           fi
