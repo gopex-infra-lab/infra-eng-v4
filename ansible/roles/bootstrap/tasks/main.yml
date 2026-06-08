@@ -1,5 +1,16 @@
 # ansible/roles/bootstrap/tasks/main.yml
 
+- name: Install base packages
+  apt:
+    name:
+      - curl
+      - vim
+      - ca-certificates
+      - openssl
+      - rsync
+    state: present
+    update_cache: yes
+
 - name: Wait for apt lock to be released
   shell: |
     while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
@@ -12,17 +23,6 @@
     name: unattended-upgrades
     enabled: false
     state: stopped
-
-- name: Install base packages
-  apt:
-    name:
-      - curl
-      - vim
-      - ca-certificates
-      - openssl
-      - rsync
-    state: present
-    update_cache: yes
 
 - name: Create app user
   user:
