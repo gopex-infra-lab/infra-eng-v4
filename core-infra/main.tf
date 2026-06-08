@@ -26,7 +26,7 @@ resource "local_file" "ansible_inventory" {
   content = <<EOT
 [fastapi]
 %{for vm_name, vm in local.vm_config~}
-%{if vm.role == "fastapi"}
+%{if contains(vm.role, "fastapi")~}
 ${vm_name} ansible_host=${vm.ip} ansible_user=${var.ansible_user}
 %{endif}
 %{endfor}
