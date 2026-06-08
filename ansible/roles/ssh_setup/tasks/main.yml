@@ -24,3 +24,22 @@
     name: github.com
     key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
     path: "/home/{{ app_user }}/.ssh/known_hosts"
+
+- name: Install GitHub private key
+  copy:
+    src: id_ed25519_github
+    dest: "/home/{{ app_user }}/.ssh/id_ed25519_github"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0600"
+
+- name: Configure SSH for GitHub
+  copy:
+    dest: "/home/{{ app_user }}/.ssh/config"
+    content: |
+      Host github.com
+        IdentityFile /home/{{ app_user }}/.ssh/id_ed25519_github
+        IdentitiesOnly yes
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0600"
