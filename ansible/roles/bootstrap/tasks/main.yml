@@ -1,5 +1,12 @@
 # ansible/roles/bootstrap/tasks/main.yml
 
+- name: Wait for apt lock to be released
+  shell: |
+    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+      sleep 5
+    done
+  changed_when: false
+
 - name: Install base packages
   apt:
     name:
@@ -10,13 +17,6 @@
       - rsync
     state: present
     update_cache: yes
-
-- name: Wait for apt lock to be released
-  shell: |
-    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
-      sleep 5
-    done
-  changed_when: false
 
 - name: Disable unattended upgrades
   systemd:
@@ -38,12 +38,6 @@
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
     mode: "0700"
-
-- name: Fix SSH permissions (after key exists)
-  file:
-    path: "/home/{{ app_user }}/.ssh"
-    owner: "{{ app_user }}"
-    group: "{{ app_user }}"
     recurse: yes
 
 - name: Install git (bootstrap, universal)

@@ -1,20 +1,7 @@
 - hosts: all
   gather_facts: false
 
-  tasks:  
-    - name: Add host to known_hosts
-      known_hosts:
-        name: "{{ ansible_host }}"
-        key: "{{ lookup('pipe', 'ssh-keyscan -H ' + ansible_host) }}"
-        path: "~/.ssh/known_hosts"
-    
-    - name: Create app user
-      user:
-        name: "{{ app_user }}"
-        shell: /bin/bash
-        create_home: yes
-        state: present
-
+  tasks:
     - name: Wait for SSH port
       wait_for:
         host: "{{ ansible_host }}"
@@ -29,13 +16,18 @@
       raw: cloud-init status --wait
       changed_when: false
 
+    - name: Add host to known_hosts
+      known_hosts:
+        name: "{{ ansible_host }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -H ' + ansible_host) }}"
+        path: "~/.ssh/known_hosts"
+
 - hosts: all
   become: true
   roles:
     - bootstrap
     - ssh_setup
     - docker
-    - common
 
 - hosts: fastapi
   become: true
