@@ -1,3 +1,11 @@
+# ansible/roles/app_fastapi/tasks/main.yml
+- name: Ensure runtime directory exists
+  file:
+    path: /opt/app
+    state: directory
+    owner: "{{ app_user }}"
+    mode: '0755'
+
 - name: Create .env file
   copy:
     dest: /opt/app/.env
@@ -17,13 +25,6 @@
     state: directory
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
-    mode: '0755'
-
-- name: Ensure runtime directory exists
-  file:
-    path: /opt/app
-    state: directory
-    owner: "{{ app_user }}"
     mode: '0755'
 
 - name: Fix ownership of /opt/src
