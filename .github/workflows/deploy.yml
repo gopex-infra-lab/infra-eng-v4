@@ -139,22 +139,7 @@ jobs:
           [aws:vars]
           app_user=ec2-user
           EOF
-
-      - name: Generate lab inventory
-        if: steps.env.outputs.DIR == 'lab'
-        run: |
-          IP=$(terraform -chdir=lab output -raw vm_ip)  # adjust output name
-    
-           mkdir -p ansible/inventory
-
-          cat <<EOF > ansible/inventory/lab.ini
-          [all]
-          lab-vm ansible_host=$IP ansible_user=$TF_VAR_ansible_user ansible_ssh_private_key_file=~/.ssh/id_ed25519_infra ansible_python_interpreter=/usr/bin/python3 ansible_become=true
-    
-          [fastapi]
-          lab-vm
-          EOF
-
+          
       - name: Run Ansible
         if: github.event.inputs.action != 'destroy'
         working-directory: ansible
