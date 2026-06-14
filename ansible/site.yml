@@ -1,21 +1,17 @@
 - hosts: all
   gather_facts: false
-
   tasks:
     - name: Wait for SSH port
       wait_for:
         host: "{{ ansible_host }}"
         port: 22
         timeout: 300
-
     - name: Wait for SSH to be ready
       wait_for_connection:
         timeout: 300
-
     - name: Wait for cloud-init to finish
       raw: cloud-init status --wait
       changed_when: false
-
     - name: Add host to known_hosts
       known_hosts:
         name: "{{ ansible_host }}"
@@ -33,3 +29,17 @@
   become: true
   roles:
     - app_fastapi
+
+- hosts: bixi_db
+  become: true
+  roles:
+    - bixi_db
+
+- hosts: bixi_ingestor
+  become: true
+  vars:
+    bixi_db_host: "{{ hostvars[groups['bixi_db'][0]]['ansible_host'] }}"
+    bixi_gbfs_base_url: "https://gbfs.velobixi.com/gbfs/gbfs.json"
+    bixi_fetch_interval: 5
+  roles:
+    - bixi_ingestor

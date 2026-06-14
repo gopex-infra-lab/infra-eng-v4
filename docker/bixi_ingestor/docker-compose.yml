@@ -1,0 +1,15 @@
+services:
+  ingestor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bixi_ingestor
+    restart: unless-stopped
+    env_file: .env
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

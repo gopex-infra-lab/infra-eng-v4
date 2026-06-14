@@ -1,0 +1,75 @@
+# roles/bixi_db/tasks/main.yml
+- name: Ensure runtime directory exists
+  file:
+    path: /opt/app
+    state: directory
+    owner: "{{ app_user }}"
+    mode: '0755'
+
+- name: Create .env file
+  copy:
+    dest: /opt/app/.env
+    content: |
+      POSTGRES_DB={{ bixi_postgres_db }}
+      POSTGRES_USER={{ bixi_postgres_user }}
+      POSTGRES_PASSWORD={{ bixi_postgres_password }}
+    owner: "{{ app_user }}"
+    mode: '0600'
+
+- name: Ensure source directory exists
+  file:
+    path: /opt/src
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0755'
+
+- name: Clone repo (forced SSH command)
+  become: true
+  become_user: "{{ app_user }}"
+  git:
+    repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v4.git"
+    dest: /opt/src/infra-eng-lab
+    version: dev
+    accept_hostkey: yes
+    key_file: "/home/{{ app_user }}/.ssh/id_ed25519_github"
+
+- name: Create data directory for postgres volume
+  file:
+    path: /opt/app/pgdata
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0700"
+
+- name: Copy docker-compose
+  copy:
+    src: /opt/src/infra-eng-lab/docker/bixi_db/docker-compose.yml
+    dest: /opt/app/docker-compose.yml
+    remote_src: yes
+
+- name: Copy schema init script
+  copy:
+    src: /opt/src/infra-eng-lab/docker/bixi_db/initdb/
+    dest: /opt/app/initdb/
+    remote_src: yes
+
+- name: Add user to docker group
+  user:
+    name: "{{ app_user }}"
+    groups: docker
+    append: yes
+
+- name: Deploy containers (idempotent)
+  community.docker.docker_compose_v2:
+    project_src: /opt/app
+    build: policy
+
+- name: Wait for PostgreSQL to accept connections
+  community.docker.docker_container_exec:
+    container: bixi_postgres
+    command: pg_isready -U {{ bixi_postgres_user }} -d {{ bixi_postgres_db }}
+  register: pg_ready
+  retries: 10
+  delay: 5
+  until: pg_ready.rc == 0

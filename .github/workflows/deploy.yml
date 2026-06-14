@@ -146,6 +146,9 @@ jobs:
           FASTAPI_POSTGRES_DB:       ${{ vars.FASTAPI_POSTGRES_DB }}
           FASTAPI_POSTGRES_USER:     ${{ vars.FASTAPI_POSTGRES_USER }}
           FASTAPI_POSTGRES_PASSWORD: ${{ secrets.FASTAPI_POSTGRES_PASSWORD }}
+          BIXI_POSTGRES_DB:          ${{ vars.BIXI_POSTGRES_DB }}
+          BIXI_POSTGRES_USER:        ${{ vars.BIXI_POSTGRES_USER }}
+          BIXI_POSTGRES_PASSWORD:    ${{ secrets.BIXI_POSTGRES_PASSWORD }}
         run: |
           ansible-playbook site.yml \
             -i ${{ steps.env.outputs.INV }} \
@@ -153,4 +156,7 @@ jobs:
             -e fastapi_postgres_db=$FASTAPI_POSTGRES_DB \
             -e fastapi_postgres_user=$FASTAPI_POSTGRES_USER \
             -e fastapi_postgres_password=$FASTAPI_POSTGRES_PASSWORD \
+            -e bixi_postgres_db=$BIXI_POSTGRES_DB \
+            -e bixi_postgres_user=$BIXI_POSTGRES_USER \
+            -e bixi_postgres_password=$BIXI_POSTGRES_PASSWORD \
             -e app_user=$TF_VAR_ansible_user
