@@ -4,10 +4,14 @@ services:
     container_name: bixi_postgres
     restart: unless-stopped
     env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"          # LAN-exposed for ingestor VM + Power BI
+      - "5432:5432"
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - bixi_postgres_data:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d:ro
     networks:
       - bixi_net
@@ -22,3 +26,7 @@ services:
 networks:
   bixi_net:
     driver: bridge
+
+volumes:
+  bixi_postgres_data:
+    name: bixi_postgres_data
