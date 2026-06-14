@@ -24,14 +24,14 @@ resource "local_file" "ansible_inventory" {
   filename = "${path.module}/../ansible/inventory/core.ini"
 
   content = <<EOT
-%{for role in distinct(flatten([for vm in values(local.vm_config) : vm.role]))~}
+%{ for role in distinct(flatten([for vm in values(local.vm_config) : vm.role])) ~}
 [${role}]
-%{for vm_name, vm in local.vm_config~}
-%{if contains(vm.role, role)~}
+%{ for vm_name, vm in local.vm_config ~}
+%{ if contains(vm.role, role) ~}
 ${vm_name} ansible_host=${vm.ip} ansible_user=${var.ansible_user}
-%{endif~}
-%{endfor~}
+%{ endif ~}
+%{ endfor ~}
 
-%{endfor~}
+%{ endfor ~}
 EOT
 }
