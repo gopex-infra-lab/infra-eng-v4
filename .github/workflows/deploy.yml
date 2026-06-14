@@ -150,7 +150,7 @@ jobs:
           ansible-playbook site.yml \
             -i ${{ steps.env.outputs.INV }} \
             -e env=${{ github.event.inputs.environment }} \
-            -e postgres_db=$POSTGRES_DB \
-            -e postgres_user=$POSTGRES_USER \
-            -e postgres_password=$POSTGRES_PASSWORD \
+            -e fastapi_postgres_db=$FASTAPI_POSTGRES_DB \
+            -e fastapi_postgres_user=$FASTAPI_POSTGRES_USER \
+            -e fastapi_postgres_password=$FASTAPI_POSTGRES_PASSWORD \
             -e app_user=$TF_VAR_ansible_user
