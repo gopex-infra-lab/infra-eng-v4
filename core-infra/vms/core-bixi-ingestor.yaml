@@ -1,0 +1,9 @@
+vm_name: core-ingestor
+memory_mb: 2048
+cpu_cores: 2
+disk_size_gb: 20
+target_node: pve3
+target_node_ip: 192.168.0.253
+ip: 192.168.0.186
+ipconfig0: ip=192.168.0.186/24,gw=192.168.0.252
+role: ["all"]
