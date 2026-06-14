@@ -39,7 +39,7 @@
   become: true
   vars:
     bixi_db_host: "{{ hostvars[groups['bixi_db'][0]]['ansible_host'] }}"
-    bixi_gbfs_base_url: "https://gbfs.velobixi.com/gbfs/gbfs.json"
+    bixi_gbfs_base_url: "https://gbfs.velobixi.com/gbfs/2-2/gbfs.json"
     bixi_fetch_interval: 5
   roles:
     - bixi_ingestor

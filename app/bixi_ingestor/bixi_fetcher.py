@@ -10,8 +10,8 @@ from psycopg2.extras import execute_values
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s")
 
-GBFS_BASE = os.environ["GBFS_BASE_URL"].rstrip("/")
-INTERVAL  = int(os.environ.get("FETCH_INTERVAL_MINUTES", "5"))
+GBFS_DISCOVERY_URL = os.environ["GBFS_BASE_URL"]   # now the gbfs.json discovery URL
+INTERVAL = int(os.environ.get("FETCH_INTERVAL_MINUTES", "5"))
 
 DB_DSN = (
     f"host={os.environ['POSTGRES_HOST']} "
@@ -21,9 +21,6 @@ DB_DSN = (
     f"password={os.environ['POSTGRES_PASSWORD']}"
 )
 
-STATION_INFO_URL   = f"{GBFS_BASE}/station_information.json"
-STATION_STATUS_URL = f"{GBFS_BASE}/station_status.json"
-
 HEALTH_FILE = "/tmp/healthy"
 
 
@@ -31,6 +28,16 @@ def fetch_json(url: str) -> dict:
     r = requests.get(url, timeout=10)
     r.raise_for_status()
     return r.json()
+
+
+def resolve_feed_urls() -> dict:
+    """Read the GBFS discovery doc and return {feed_name: url}."""
+    disc = fetch_json(GBFS_DISCOVERY_URL)
+    data = disc["data"]
+    # Discovery is keyed by language; prefer 'en', else first available.
+    lang = "en" if "en" in data else next(iter(data))
+    feeds = data[lang]["feeds"]
+    return {f["name"]: f["url"] for f in feeds}
 
 
 def upsert_stations(conn, stations: list):
@@ -79,8 +86,9 @@ def run():
     logging.info("Fetching BIXI data...")
     fetched_at = datetime.now(timezone.utc)
     try:
-        info_data   = fetch_json(STATION_INFO_URL)
-        status_data = fetch_json(STATION_STATUS_URL)
+        feeds = resolve_feed_urls()
+        info_data   = fetch_json(feeds["station_information"])
+        status_data = fetch_json(feeds["station_status"])
 
         with psycopg2.connect(DB_DSN) as conn:
             upsert_stations(conn, info_data["data"]["stations"])
@@ -94,7 +102,7 @@ def run():
 
 
 if __name__ == "__main__":
-    run()  # immediate run on start
+    run()
     schedule.every(INTERVAL).minutes.do(run)
     while True:
         schedule.run_pending()
