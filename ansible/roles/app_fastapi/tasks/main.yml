@@ -10,9 +10,9 @@
   copy:
     dest: /opt/app/.env
     content: |
-      POSTGRES_DB={{ postgres_db }}
-      POSTGRES_USER={{ postgres_user }}
-      POSTGRES_PASSWORD={{ postgres_password }}
+      POSTGRES_DB={{ fastapi_postgres_db }}
+      POSTGRES_USER={{ fastapi_postgres_user }}
+      POSTGRES_PASSWORD={{ fastapi_postgres_password }}
       GRAFANA_ADMIN_USER={{ lookup('env', 'GRAFANA_ADMIN_USER') }}
       GRAFANA_ADMIN_PASSWORD={{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') }}
       APP_DOMAIN={{ lookup('env', 'APP_DOMAIN') }}

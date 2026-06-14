@@ -143,9 +143,9 @@ jobs:
         if: github.event.inputs.action != 'destroy'
         working-directory: ansible
         env:
-          POSTGRES_DB: labdb
-          POSTGRES_USER: lab
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          FASTAPI_POSTGRES_DB:       ${{ vars.FASTAPI_POSTGRES_DB }}
+          FASTAPI_POSTGRES_USER:     ${{ vars.FASTAPI_POSTGRES_USER }}
+          FASTAPI_POSTGRES_PASSWORD: ${{ secrets.FASTAPI_POSTGRES_PASSWORD }}
         run: |
           ansible-playbook site.yml \
             -i ${{ steps.env.outputs.INV }} \
