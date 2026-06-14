@@ -61,11 +61,11 @@
     project_src: /opt/app
     build: policy
 
-- name: Wait for fetcher to report healthy
-  community.docker.docker_container_exec:
-    container: bixi_ingestor
-    command: cat /tmp/healthy
-  register: fetcher_health
+- name: Wait for ingestor container to be healthy
+  community.docker.docker_container_info:
+    name: bixi_ingestor
+  register: ingestor_info
   retries: 12
   delay: 10
-  until: fetcher_health.rc == 0
+  until: >
+    ingestor_info.container.State.Health.Status == "healthy"
