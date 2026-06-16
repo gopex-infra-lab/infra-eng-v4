@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s")
 
 GBFS_DISCOVERY_URL = os.environ["GBFS_BASE_URL"]   # now the gbfs.json discovery URL
-INTERVAL = int(os.environ.get("FETCH_INTERVAL_MINUTES", "5"))
+INTERVAL = int(os.environ.get("FETCH_INTERVAL_MINUTES", "60"))
 
 DB_DSN = (
     f"host={os.environ['POSTGRES_HOST']} "
