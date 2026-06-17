@@ -152,6 +152,7 @@ jobs:
         run: |
           ansible-playbook site.yml \
             -i ${{ steps.env.outputs.INV }} \
+            --private-key ~/.ssh/id_ed25519_infra \
             -e env=${{ github.event.inputs.environment }} \
             -e fastapi_postgres_db=$FASTAPI_POSTGRES_DB \
             -e fastapi_postgres_user=$FASTAPI_POSTGRES_USER \
