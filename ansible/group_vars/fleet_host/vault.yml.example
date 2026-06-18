@@ -1,9 +1,0 @@
-# Fill in real values, rename to vault.yml, then encrypt:
-#   ansible-vault encrypt infra/ansible/group_vars/fleet_host/vault.yml
-# The decrypt password is stored as the GitHub secret VAULT_PASSWORD.
-vault_pg_password: "REPLACE_with_strong_db_password"
-vault_grafana_password: "REPLACE_with_strong_grafana_password"
-
-# Only if you keep GHCR packages PRIVATE (otherwise leave commented out):
-# ghcr_user: "miguel"
-# ghcr_token: "ghp_REPLACE_read_packages_PAT"

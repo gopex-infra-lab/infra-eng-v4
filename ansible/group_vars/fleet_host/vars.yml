@@ -1,3 +1,0 @@
-# Non-secret host variables. Secrets live in vault.yml (encrypted).
-pg_user: fleet
-pg_database: fleet
