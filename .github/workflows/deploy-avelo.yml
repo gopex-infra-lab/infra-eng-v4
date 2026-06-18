@@ -1,0 +1,49 @@
+name: deploy-avelo
+
+on:
+  repository_dispatch:
+    types: [deploy-avelo]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Image tag (git SHA) to deploy; 'latest' if blank"
+        required: false
+        default: "latest"
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure Ansible
+        run: |
+          python3 -m pip install --user "ansible-core==2.17.*" >/dev/null
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # Reuse your existing inventory-generation step here (Terraform -> inventory),
+      # the same one your other deploys use. It produces inventory.ini.
+      - name: Generate inventory
+        run: ./scripts/gen-inventory.sh    # <-- your existing mechanism
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          tag="${{ github.event.client_payload.sha }}"
+          [ -z "$tag" ] && tag="${{ github.event.inputs.sha }}"
+          [ -z "$tag" ] && tag="latest"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      # Only the avelo_app role runs (tag + limit). Secrets are passed as
+      # extra-vars from repo secrets — nothing committed, no group_vars.
+      - name: Deploy
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          ansible-playbook site.yml \
+            -i inventory.ini \
+            --limit avelo_fleet \
+            --tags avelo \
+            -e "avelo_image_tag=${{ steps.tag.outputs.tag }}" \
+            -e "avelo_pg_password=${{ secrets.AVELO_PG_PASSWORD }}" \
+            -e "avelo_grafana_password=${{ secrets.AVELO_GRAFANA_PASSWORD }}"
