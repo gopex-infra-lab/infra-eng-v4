@@ -48,8 +48,8 @@
   become: true
   vars:
     avelo_image_tag: "{{ avelo_image_tag | default('latest') }}"
-    avelo_pg_password: "{{ avelo_pg_password }}" # from CI extra-vars
-    avelo_grafana_password: "{{ avelo_grafana_password }}" # from CI extra-vars
+    avelo_pg_password: "{{ avelo_pg_password }}"
+    avelo_grafana_password: "{{ avelo_grafana_password }}"
   roles:
     - role: avelo_app
       tags: [avelo]
