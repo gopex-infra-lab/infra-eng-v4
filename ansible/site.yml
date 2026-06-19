@@ -44,12 +44,13 @@
   roles:
     - bixi_ingestor
 
-- hosts: avelo_fleet
+- hosts: avelo_app
   become: true
+  tags: [avelo, never]
   vars:
     avelo_image_tag: "{{ avelo_image_tag | default('latest') }}"
-    avelo_pg_password: "{{ avelo_pg_password }}"
-    avelo_grafana_password: "{{ avelo_grafana_password }}"
+    avelo_pg_password: "{{ avelo_pg_password | default('') }}"
+    avelo_grafana_password: "{{ avelo_grafana_password | default('') }}"
   roles:
     - role: avelo_app
-      tags: [avelo]
+      tags: [avelo, never]
