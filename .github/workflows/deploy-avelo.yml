@@ -86,9 +86,9 @@ jobs:
             --private-key ~/.ssh/id_ed25519_infra \
             --limit avelo_app \
             --tags avelo \
-            -e avelo_image_tag=${{ steps.tag.outputs.tag }} \
-            -e avelo_postgres_db=$AVELO_POSTGRES_DB \
-            -e avelo_postgres_user=$AVELO_POSTGRES_USER \
-            -e avelo_postgres_password=$AVELO_POSTGRES_PASSWORD \
-            -e avelo_grafana_password=$AVELO_GRAFANA_PASSWORD \
-            -e app_user=$TF_VAR_ansible_user
+            -e "avelo_image_tag=${{ steps.tag.outputs.tag }}" \
+            -e "avelo_postgres_db=$AVELO_POSTGRES_DB" \
+            -e "avelo_postgres_user=$AVELO_POSTGRES_USER" \
+            -e "avelo_postgres_password=$AVELO_POSTGRES_PASSWORD" \
+            -e "avelo_grafana_password=$AVELO_GRAFANA_PASSWORD" \
+            -e "app_user=$TF_VAR_ansible_user"
