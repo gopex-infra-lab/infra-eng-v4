@@ -1,33 +1,22 @@
 - hosts: all
   gather_facts: false
-
-  tasks:  
-    - name: Add host to known_hosts
-      known_hosts:
-        name: "{{ ansible_host }}"
-        key: "{{ lookup('pipe', 'ssh-keyscan -H ' + ansible_host) }}"
-        path: "~/.ssh/known_hosts"
-    
-    - name: Create app user
-      user:
-        name: "{{ app_user }}"
-        shell: /bin/bash
-        create_home: yes
-        state: present
-
+  tasks:
     - name: Wait for SSH port
       wait_for:
         host: "{{ ansible_host }}"
         port: 22
         timeout: 300
-
     - name: Wait for SSH to be ready
       wait_for_connection:
         timeout: 300
-
     - name: Wait for cloud-init to finish
       raw: cloud-init status --wait
       changed_when: false
+    - name: Add host to known_hosts
+      known_hosts:
+        name: "{{ ansible_host }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -H ' + ansible_host) }}"
+        path: "~/.ssh/known_hosts"
 
 - hosts: all
   become: true
@@ -35,9 +24,33 @@
     - bootstrap
     - ssh_setup
     - docker
-    - common
 
 - hosts: fastapi
   become: true
   roles:
     - app_fastapi
+
+- hosts: bixi_db
+  become: true
+  roles:
+    - bixi_db
+
+- hosts: bixi_ingestor
+  become: true
+  vars:
+    bixi_db_host: "{{ hostvars[groups['bixi_db'][0]]['ansible_host'] }}"
+    bixi_gbfs_base_url: "https://gbfs.velobixi.com/gbfs/2-2/gbfs.json"
+    bixi_fetch_interval: 5
+  roles:
+    - bixi_ingestor
+
+- hosts: avelo_app
+  become: true
+  tags: [avelo, never]
+  vars:
+    avelo_image_tag: "{{ avelo_image_tag | default('latest') }}"
+    avelo_pg_password: "{{ avelo_pg_password | default('') }}"
+    avelo_grafana_password: "{{ avelo_grafana_password | default('') }}"
+  roles:
+    - role: avelo_app
+      tags: [avelo, never]

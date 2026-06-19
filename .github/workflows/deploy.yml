@@ -49,7 +49,7 @@ jobs:
       (github.ref == 'refs/heads/dev' && github.event_name == 'push') ||
       (github.ref == 'refs/heads/dev' && github.event_name == 'workflow_dispatch') ||
       (github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'core')
-    runs-on: self-hosted
+    runs-on: [self-hosted, Linux, X64]
     env:
       TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
       TF_VAR_pm_api_token_id: ${{ secrets.PM_API_TOKEN_ID }}
@@ -61,7 +61,6 @@ jobs:
       APP_DOMAIN: ${{ secrets.APP_DOMAIN }}
       TF_VAR_allowed_ssh_cidr: ${{ secrets.TF_VAR_ALLOWED_SSH_CIDR }}
       TF_VAR_ansible_user: ${{ secrets.TF_VAR_ANSIBLE_USER }}
-
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
@@ -139,19 +138,26 @@ jobs:
           [aws:vars]
           app_user=ec2-user
           EOF
-
+          
       - name: Run Ansible
         if: github.event.inputs.action != 'destroy'
         working-directory: ansible
         env:
-          POSTGRES_DB: labdb
-          POSTGRES_USER: lab
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          FASTAPI_POSTGRES_DB:       ${{ vars.FASTAPI_POSTGRES_DB }}
+          FASTAPI_POSTGRES_USER:     ${{ vars.FASTAPI_POSTGRES_USER }}
+          FASTAPI_POSTGRES_PASSWORD: ${{ secrets.FASTAPI_POSTGRES_PASSWORD }}
+          BIXI_POSTGRES_DB:          ${{ vars.BIXI_POSTGRES_DB }}
+          BIXI_POSTGRES_USER:        ${{ vars.BIXI_POSTGRES_USER }}
+          BIXI_POSTGRES_PASSWORD:    ${{ secrets.BIXI_POSTGRES_PASSWORD }}
         run: |
           ansible-playbook site.yml \
             -i ${{ steps.env.outputs.INV }} \
+            --private-key ~/.ssh/id_ed25519_infra \
             -e env=${{ github.event.inputs.environment }} \
-            -e postgres_db=$POSTGRES_DB \
-            -e postgres_user=$POSTGRES_USER \
-            -e postgres_password=$POSTGRES_PASSWORD \
+            -e fastapi_postgres_db=$FASTAPI_POSTGRES_DB \
+            -e fastapi_postgres_user=$FASTAPI_POSTGRES_USER \
+            -e fastapi_postgres_password=$FASTAPI_POSTGRES_PASSWORD \
+            -e bixi_postgres_db=$BIXI_POSTGRES_DB \
+            -e bixi_postgres_user=$BIXI_POSTGRES_USER \
+            -e bixi_postgres_password=$BIXI_POSTGRES_PASSWORD \
             -e app_user=$TF_VAR_ansible_user

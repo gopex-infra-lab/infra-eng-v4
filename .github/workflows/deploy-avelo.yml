@@ -1,0 +1,58 @@
+name: deploy-avelo
+
+on:
+  repository_dispatch:
+    types: [deploy-avelo]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Image tag (git SHA) to deploy; 'latest' if blank"
+        required: false
+        default: "latest"
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure Ansible
+        run: |
+          python3 -m pip install --user "ansible-core==2.17.*" >/dev/null
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Set environment
+        id: env
+        run: |
+          echo "DIR=core" >> "$GITHUB_OUTPUT"
+          echo "INV=inventory/core.ini" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          tag="${{ github.event.client_payload.sha }}"
+          [ -z "$tag" ] && tag="${{ github.event.inputs.sha }}"
+          [ -z "$tag" ] && tag="latest"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Run Ansible
+        if: github.event.inputs.action != 'destroy'
+        working-directory: ansible
+        env:
+          AVELO_POSTGRES_DB:       ${{ vars.AVELO_POSTGRES_DB }}
+          AVELO_POSTGRES_USER:     ${{ vars.AVELO_POSTGRES_USER }}
+          AVELO_POSTGRES_PASSWORD: ${{ secrets.AVELO_PG_PASSWORD }}
+          AVELO_GRAFANA_PASSWORD:  ${{ secrets.AVELO_GRAFANA_PASSWORD }}
+        run: |
+          ansible-playbook site.yml \
+            -i ${{ steps.env.outputs.INV }} \
+            --private-key ~/.ssh/id_ed25519_infra \
+            --limit avelo_app \
+            --tags avelo \
+            -e env=${{ github.event.inputs.environment }} \
+            -e avelo_image_tag=${{ steps.tag.outputs.tag }} \
+            -e avelo_postgres_db=$AVELO_POSTGRES_DB \
+            -e avelo_postgres_user=$AVELO_POSTGRES_USER \
+            -e avelo_postgres_password=$AVELO_PG_PASSWORD \
+            -e avelo_grafana_password=$AVELO_GRAFANA_PASSWORD \
+            -e app_user=$TF_VAR_ansible_user

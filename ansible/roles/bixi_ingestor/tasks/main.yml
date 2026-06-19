@@ -1,0 +1,71 @@
+# roles/bixi_ingestor/tasks/main.yml
+- name: Ensure runtime directory exists
+  file:
+    path: /opt/app
+    state: directory
+    owner: "{{ app_user }}"
+    mode: '0755'
+
+- name: Create .env file
+  copy:
+    dest: /opt/app/.env
+    content: |
+      POSTGRES_DB={{ bixi_postgres_db }}
+      POSTGRES_USER={{ bixi_postgres_user }}
+      POSTGRES_PASSWORD={{ bixi_postgres_password }}
+      POSTGRES_HOST={{ bixi_db_host }}
+      POSTGRES_PORT=5432
+      GBFS_BASE_URL={{ bixi_gbfs_base_url }}
+      FETCH_INTERVAL_MINUTES={{ bixi_fetch_interval | default(5) }}
+    owner: "{{ app_user }}"
+    mode: '0600'
+
+- name: Ensure source directory exists
+  file:
+    path: /opt/src
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0755'
+
+- name: Clone repo (forced SSH command)
+  become: true
+  become_user: "{{ app_user }}"
+  git:
+    repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v4.git"
+    dest: /opt/src/infra-eng-lab
+    version: dev
+    accept_hostkey: yes
+    key_file: "/home/{{ app_user }}/.ssh/id_ed25519_github"
+
+- name: Copy docker-compose
+  copy:
+    src: /opt/src/infra-eng-lab/docker/bixi_ingestor/docker-compose.yml
+    dest: /opt/app/docker-compose.yml
+    remote_src: yes
+
+- name: Copy fetcher source
+  copy:
+    src: /opt/src/infra-eng-lab/app/bixi_ingestor/
+    dest: /opt/app/
+    remote_src: yes
+
+- name: Add user to docker group
+  user:
+    name: "{{ app_user }}"
+    groups: docker
+    append: yes
+
+- name: Deploy containers (idempotent)
+  community.docker.docker_compose_v2:
+    project_src: /opt/app
+    build: policy
+
+- name: Wait for ingestor container to be healthy
+  community.docker.docker_container_info:
+    name: bixi_ingestor
+  register: ingestor_info
+  retries: 12
+  delay: 10
+  until: >
+    ingestor_info.container.State.Health.Status == "healthy"
