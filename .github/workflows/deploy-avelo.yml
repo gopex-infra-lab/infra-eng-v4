@@ -21,6 +21,7 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
+    environment: ${{ github.event.client_payload.environment || github.event.inputs.environment || 'core' }}
     env:
       TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
       TF_VAR_pm_api_token_id: ${{ secrets.PM_API_TOKEN_ID }}
