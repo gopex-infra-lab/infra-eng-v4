@@ -43,3 +43,13 @@
     bixi_fetch_interval: 5
   roles:
     - bixi_ingestor
+
+- hosts: avelo_fleet
+  become: true
+  vars:
+    avelo_image_tag: "{{ avelo_image_tag | default('latest') }}"
+    avelo_pg_password: "{{ avelo_pg_password }}"
+    avelo_grafana_password: "{{ avelo_grafana_password }}"
+  roles:
+    - role: avelo_app
+      tags: [avelo]

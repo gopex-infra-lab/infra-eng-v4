@@ -1,0 +1,55 @@
+# Rendered by the avelo_app role. Images are built+pushed by the app repo CI.
+# Schema is baked into the poller image; dashboards into the grafana image —
+# so there are no host-side config files, only this compose and .env.
+services:
+  timescaledb:
+    image: timescale/timescaledb:2.17.2-pg16
+    environment:
+      POSTGRES_USER: {{ avelo_pg_user }}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: {{ avelo_pg_database }}
+    volumes:
+      - tsdb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ avelo_pg_user }}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  poller:
+    image: {{ avelo_registry }}/avelo-poller:{{ avelo_image_tag }}
+    depends_on:
+      timescaledb: {condition: service_healthy}
+    environment:
+      DATABASE_URL: postgresql://{{ avelo_pg_user }}:${PGPASSWORD}@timescaledb:5432/{{ avelo_pg_database }}
+      APPLY_SCHEMA: "1"
+      POLL_INTERVAL_SECONDS: "{{ avelo_poll_interval_seconds }}"
+    restart: unless-stopped
+
+  inference:
+    image: {{ avelo_registry }}/avelo-inference:{{ avelo_image_tag }}
+    depends_on:
+      timescaledb: {condition: service_healthy}
+    environment:
+      DATABASE_URL: postgresql://{{ avelo_pg_user }}:${PGPASSWORD}@timescaledb:5432/{{ avelo_pg_database }}
+      INFER_INTERVAL_SECONDS: "{{ avelo_infer_interval_seconds }}"
+      INFER_SYSTEMS: "{{ avelo_infer_systems }}"
+    restart: unless-stopped
+
+  grafana:
+    image: {{ avelo_registry }}/avelo-grafana:{{ avelo_image_tag }}
+    depends_on: [timescaledb]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
+      PGUSER: {{ avelo_pg_user }}
+      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: {{ avelo_pg_database }}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports: ["{{ avelo_grafana_port }}:3000"]
+    restart: unless-stopped
+
+volumes:
+  tsdb_data:
+  grafana_data:

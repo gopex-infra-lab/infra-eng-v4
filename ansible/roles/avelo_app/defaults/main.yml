@@ -1,0 +1,20 @@
+---
+# Non-secret defaults for the avelo_app role. Override per-deploy from the
+# site.yml play vars or CI extra-vars. No group_vars needed.
+avelo_app_dir: /opt/avelo-fleet-intelligence
+avelo_registry: ghcr.io/gopex-infra-lab
+avelo_image_tag: latest                 # CI passes the git SHA via -e
+
+avelo_pg_user: fleet
+avelo_pg_database: fleet
+avelo_grafana_port: 3000
+
+avelo_gbfs_url: "https://quebec.publicbikesystem.net/customer/gbfs/v3.0/gbfs.json"
+bixi_gbfs_url: "https://gbfs.velobixi.com/gbfs/gbfs.json"
+avelo_poll_interval_seconds: 60
+avelo_infer_interval_seconds: 600
+avelo_infer_systems: "avelo,bixi"
+
+# Secrets (avelo_pg_password, avelo_grafana_password) come from CI extra-vars.
+# Optional GHCR pull creds for PRIVATE packages (leave unset if public):
+# avelo_ghcr_user, avelo_ghcr_token
