@@ -9,18 +9,61 @@ on:
         description: "Image tag (git SHA) to deploy; 'latest' if blank"
         required: false
         default: "latest"
+      environment:
+        description: "environment"
+        required: true
+        default: "core"
+        type: choice
+        options:
+          - core
+          - lab
 
 jobs:
   deploy:
     runs-on: self-hosted
+    environment: ${{ github.event.client_payload.environment || github.event.inputs.environment || 'core' }}
+    env:
+      TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+      TF_VAR_pm_api_token_id: ${{ secrets.PM_API_TOKEN_ID }}
+      TF_VAR_pm_api_token_secret: ${{ secrets.PM_API_TOKEN_SECRET }}
+      TF_VAR_infra_public_key: ${{ secrets.INFRA_PUBLIC_KEY }}
+      TF_VAR_infra_private_key: ${{ secrets.INFRA_PRIVATE_KEY }}
+      TF_VAR_allowed_ssh_cidr: ${{ secrets.TF_VAR_ALLOWED_SSH_CIDR }}
+      TF_VAR_ansible_user: ${{ secrets.TF_VAR_ANSIBLE_USER }}
     steps:
+      - name: Fix workspace permissions
+        run: sudo chown -R $USER:$USER $GITHUB_WORKSPACE || true
+
       - uses: actions/checkout@v4
 
       - name: Set environment
         id: env
         run: |
-          echo "DIR=core" >> "$GITHUB_OUTPUT"
-          echo "INV=inventory/core.ini" >> "$GITHUB_OUTPUT"
+          ENVIRONMENT="${{ github.event.client_payload.environment || github.event.inputs.environment || 'core' }}"
+          if [ "$ENVIRONMENT" = "lab" ]; then
+            echo "DIR=lab" >> "$GITHUB_OUTPUT"
+            echo "INV=inventory/lab.ini" >> "$GITHUB_OUTPUT"
+          else
+            echo "DIR=core-infra" >> "$GITHUB_OUTPUT"
+            echo "INV=inventory/core.ini" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: ${{ steps.env.outputs.DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform Apply (regenerates inventory)
+        working-directory: ${{ steps.env.outputs.DIR }}
+        run: terraform apply -auto-approve -input=false
+
+      - name: Place infra SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf "%s\n" "${{ secrets.INFRA_PRIVATE_KEY }}" > ~/.ssh/id_ed25519_infra
+          chmod 600 ~/.ssh/id_ed25519_infra
 
       - name: Resolve image tag
         id: tag
@@ -31,7 +74,6 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Run Ansible
-        if: github.event.inputs.action != 'destroy'
         working-directory: ansible
         env:
           AVELO_POSTGRES_DB:       ${{ vars.AVELO_POSTGRES_DB }}
@@ -44,10 +86,9 @@ jobs:
             --private-key ~/.ssh/id_ed25519_infra \
             --limit avelo_app \
             --tags avelo \
-            -e env=${{ github.event.inputs.environment }} \
             -e avelo_image_tag=${{ steps.tag.outputs.tag }} \
             -e avelo_postgres_db=$AVELO_POSTGRES_DB \
             -e avelo_postgres_user=$AVELO_POSTGRES_USER \
-            -e avelo_postgres_password=$AVELO_PG_PASSWORD \
+            -e avelo_postgres_password=$AVELO_POSTGRES_PASSWORD \
             -e avelo_grafana_password=$AVELO_GRAFANA_PASSWORD \
             -e app_user=$TF_VAR_ansible_user
