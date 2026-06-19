@@ -16,11 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ensure Ansible
-        run: |
-          python3 -m pip install --user "ansible-core==2.17.*" >/dev/null
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
       - name: Set environment
         id: env
         run: |
