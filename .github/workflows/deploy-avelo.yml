@@ -17,7 +17,7 @@ on:
         options:
           - core
           - lab
-# comment
+
 jobs:
   deploy:
     runs-on: self-hosted
