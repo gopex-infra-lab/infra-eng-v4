@@ -35,14 +35,24 @@ jobs:
           [ -z "$tag" ] && tag="latest"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy
+      - name: Run Ansible
+        if: github.event.inputs.action != 'destroy'
+        working-directory: ansible
         env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
+          AVELO_POSTGRES_DB:       ${{ vars.AVELO_POSTGRES_DB }}
+          AVELO_POSTGRES_USER:     ${{ vars.AVELO_POSTGRES_USER }}
+          AVELO_POSTGRES_PASSWORD: ${{ secrets.AVELO_PG_PASSWORD }}
+          AVELO_GRAFANA_PASSWORD:  ${{ secrets.AVELO_GRAFANA_PASSWORD }}
         run: |
           ansible-playbook site.yml \
-            -i inventory.ini \
-            --limit avelo_fleet \
+            -i ${{ steps.env.outputs.INV }} \
+            --private-key ~/.ssh/id_ed25519_infra \
+            --limit avelo_app \
             --tags avelo \
-            -e "avelo_image_tag=${{ steps.tag.outputs.tag }}" \
-            -e "avelo_pg_password=${{ secrets.AVELO_PG_PASSWORD }}" \
-            -e "avelo_grafana_password=${{ secrets.AVELO_GRAFANA_PASSWORD }}"
+            -e env=${{ github.event.inputs.environment }} \
+            -e avelo_image_tag=${{ steps.tag.outputs.tag }} \
+            -e avelo_postgres_db=$AVELO_POSTGRES_DB \
+            -e avelo_postgres_user=$AVELO_POSTGRES_USER \
+            -e avelo_postgres_password=$AVELO_PG_PASSWORD \
+            -e avelo_grafana_password=$AVELO_GRAFANA_PASSWORD \
+            -e app_user=$TF_VAR_ansible_user
