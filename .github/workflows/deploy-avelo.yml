@@ -91,4 +91,6 @@ jobs:
             -e "avelo_postgres_user=$AVELO_POSTGRES_USER" \
             -e "avelo_postgres_password=$AVELO_POSTGRES_PASSWORD" \
             -e "avelo_grafana_password=$AVELO_GRAFANA_PASSWORD" \
+            -e "avelo_ghcr_user=${{ vars.AVELO_GHCR_USER }}" \
+            -e "avelo_ghcr_token=${{ secrets.GHCR_PULL_TOKEN }}" \
             -e "app_user=$TF_VAR_ansible_user"
