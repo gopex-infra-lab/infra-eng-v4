@@ -47,8 +47,6 @@ services:
       PGUSER: {{ avelo_pg_user }}
       PGPASSWORD: ${PGPASSWORD}
       PGDATABASE: {{ avelo_pg_database }}
-    volumes:
-      - grafana_data:/var/lib/grafana
     ports: ["{{ avelo_grafana_port }}:3000"]
     restart: unless-stopped
 
