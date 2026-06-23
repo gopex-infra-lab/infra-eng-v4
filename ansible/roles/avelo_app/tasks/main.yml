@@ -40,7 +40,7 @@
   changed_when: true
 
 - name: Prune unused images
-      community.docker.docker_prune:
-        images: true
-        images_filters:
-          dangling: false
+  community.docker.docker_prune:
+    images: true
+    images_filters:
+      dangling: false
