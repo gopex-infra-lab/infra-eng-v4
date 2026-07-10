@@ -13,7 +13,7 @@ avelo_gbfs_url: "https://quebec.publicbikesystem.net/customer/gbfs/v3.0/gbfs.jso
 bixi_gbfs_url: "https://gbfs.velobixi.com/gbfs/gbfs.json"
 avelo_poll_interval_seconds: 60
 avelo_infer_interval_seconds: 600
-avelo_infer_systems: "avelo,bixi"
+avelo_infer_systems: "avelo"
 
 # Secrets (avelo_pg_password, avelo_grafana_password) come from CI extra-vars.
 # Optional GHCR pull creds for PRIVATE packages (leave unset if public):
