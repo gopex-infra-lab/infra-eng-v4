@@ -57,7 +57,7 @@
     force_basic_auth: true
     status_code: [200, 404]
   register: editor_lookup
-  no_log: true
+  #no_log: true
 
 - name: Create associate user
   ansible.builtin.uri:
