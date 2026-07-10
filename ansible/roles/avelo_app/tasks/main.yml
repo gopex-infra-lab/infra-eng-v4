@@ -39,6 +39,56 @@
     chdir: "{{ avelo_app_dir }}"
   changed_when: true
 
+- name: Wait for Grafana API
+  ansible.builtin.uri:
+    url: "http://localhost:{{ avelo_grafana_port }}/api/health"
+    status_code: 200
+  register: grafana_health
+  retries: 12
+  delay: 5
+  until: grafana_health.status == 200
+
+- name: Check if associate user exists
+  ansible.builtin.uri:
+    url: "http://localhost:{{ avelo_grafana_port }}/api/users/lookup?loginOrEmail={{ avelo_grafana_editor_user }}"
+    method: GET
+    user: admin
+    password: "{{ avelo_grafana_password }}"
+    force_basic_auth: true
+    status_code: [200, 404]
+  register: editor_lookup
+  no_log: true
+
+- name: Create associate user
+  ansible.builtin.uri:
+    url: "http://localhost:{{ avelo_grafana_port }}/api/admin/users"
+    method: POST
+    user: admin
+    password: "{{ avelo_grafana_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      name: "{{ avelo_grafana_editor_user }}"
+      login: "{{ avelo_grafana_editor_user }}"
+      password: "{{ avelo_grafana_editor_password }}"
+    status_code: 200
+  when: editor_lookup.status == 404
+  register: editor_create
+  no_log: true
+
+- name: Set associate role to Editor
+  ansible.builtin.uri:
+    url: "http://localhost:{{ avelo_grafana_port }}/api/org/users/{{ editor_lookup.json.id if editor_lookup.status == 200 else editor_create.json.id }}"
+    method: PATCH
+    user: admin
+    password: "{{ avelo_grafana_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      role: "Editor"
+    status_code: 200
+  no_log: true
+
 - name: Prune unused images
   community.docker.docker_prune:
     images: true
