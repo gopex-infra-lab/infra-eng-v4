@@ -78,6 +78,8 @@ jobs:
         env:
           AVELO_POSTGRES_DB:       ${{ vars.AVELO_POSTGRES_DB }}
           AVELO_POSTGRES_USER:     ${{ vars.AVELO_POSTGRES_USER }}
+          AVELO_GRAFANA_EDITOR_USER: ${{ vars.AVELO_GRAFANA_EDITOR_USER }}
+          AVELO_GRAFANA_EDITOR_PASSWORD:  ${{ secrets.AVELO_GRAFANA_EDITOR_PASSWORD }}
           AVELO_POSTGRES_PASSWORD: ${{ secrets.AVELO_PG_PASSWORD }}
           AVELO_GRAFANA_PASSWORD:  ${{ secrets.AVELO_GRAFANA_PASSWORD }}
         run: |
@@ -91,6 +93,8 @@ jobs:
             -e "avelo_postgres_user=$AVELO_POSTGRES_USER" \
             -e "avelo_postgres_password=$AVELO_POSTGRES_PASSWORD" \
             -e "avelo_grafana_password=$AVELO_GRAFANA_PASSWORD" \
+            -e "avelo_grafana_editor_user=$AVELO_GRAFANA_EDITOR_USER" \
+            -e "avelo_grafana_editor_password=$AVELO_GRAFANA_EDITOR_PASSWORD" \
             -e "avelo_ghcr_user=${{ vars.AVELO_GHCR_USER }}" \
             -e "avelo_ghcr_token=${{ secrets.GHCR_PULL_TOKEN }}" \
             -e "app_user=$TF_VAR_ansible_user"
