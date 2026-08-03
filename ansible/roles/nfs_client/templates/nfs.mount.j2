@@ -1,0 +1,11 @@
+[Unit]
+Description=NFS mount {{ item.path }} from {{ nas_host }}
+
+[Mount]
+What={{ nas_host }}:{{ item.export }}
+Where={{ item.path }}
+Type=nfs4
+Options={{ nfs_mount_options }}
+
+[Install]
+WantedBy=multi-user.target

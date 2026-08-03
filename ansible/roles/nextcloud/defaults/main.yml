@@ -1,0 +1,31 @@
+---
+# Non-secret defaults for the nextcloud role. Secrets (db passwords, and the
+# secret/passwordsalt/instanceid carried over from the OLD instance) come
+# from CI extra-vars, same pattern as avelo_pg_password.
+nextcloud_repo_dest: /opt/src/infra-eng-lab
+nextcloud_mariadb_image: "mariadb:11.4"
+nextcloud_redis_image: "redis:7-alpine"
+nextcloud_app_image: "nextcloud:31-apache"
+
+nextcloud_http_port: 8080
+nextcloud_php_memory_limit: "1G"
+nextcloud_upload_limit: "10G"
+nextcloud_default_phone_region: "CA"
+nextcloud_db_name: nextcloud
+nextcloud_db_user: nextcloud
+nextcloud_overwrite_host: "nextcloud.home.arpa"
+nextcloud_overwrite_protocol: "https"
+nextcloud_trusted_domains: "nextcloud.home.arpa 192.168.0.215"
+
+# true = restoring the existing MariaDB dump. The install wizard must never
+# run in this mode — see the guard tasks below.
+nextcloud_migration_mode: true
+
+nextcloud_users_quota: []
+# e.g.
+# nextcloud_users_quota:
+#   - { user: "user1", quota: "1000 GB" }
+
+nfs_mounts:
+  - export: /volume1/homes
+    path: /mnt/nas/nextcloud

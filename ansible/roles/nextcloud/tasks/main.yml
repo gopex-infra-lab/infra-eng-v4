@@ -1,0 +1,287 @@
+# ansible/roles/nextcloud/tasks/main.yml
+#
+# House pattern (matches bixi_db / app_fastapi): create /opt/app, clone the
+# infra repo, copy the static docker-compose.yml from it, render the .env
+# and config.php with secrets, deploy via docker_compose_v2.
+#
+# This role assumes the nfs_client role already ran on this host (site.yml
+# orders it first) so /mnt/nas/nextcloud is mounted before we get here.
+
+- name: Assert secrets carried over from the OLD instance are present
+  assert:
+    that:
+      - nextcloud_secret is defined and nextcloud_secret | length > 0
+      - nextcloud_passwordsalt is defined and nextcloud_passwordsalt | length > 0
+      - nextcloud_instanceid is defined and nextcloud_instanceid | length > 0
+    fail_msg: >-
+      secret / passwordsalt / instanceid from the OLD config.php are missing.
+      Restoring the database without them makes every password in the vault
+      permanently undecryptable. Pass them as extra-vars (or via CI secrets)
+      before running this role.
+  when: nextcloud_migration_mode | bool
+  no_log: true
+
+- name: Assert the NAS data mount is present before deploying
+  command: "findmnt -t nfs4 --target {{ nfs_mounts[0].path }}"
+  changed_when: false
+
+- name: Ensure runtime directory exists
+  file:
+    path: /opt/app
+    state: directory
+    owner: "{{ app_user }}"
+    mode: "0755"
+
+- name: Ensure data subdirectories exist
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default(app_user) }}"
+    mode: "{{ item.mode | default('0750') }}"
+  loop:
+    - { path: /opt/app/db }
+    - { path: /opt/app/config, owner: "33" }   # www-data uid in the container
+    - { path: /opt/app/logs, owner: "33" }
+
+- name: Create .env file
+  copy:
+    dest: /opt/app/.env
+    content: |
+      MARIADB_DATABASE={{ nextcloud_db_name }}
+      MARIADB_USER={{ nextcloud_db_user }}
+      MARIADB_PASSWORD={{ nextcloud_db_password }}
+      MARIADB_ROOT_PASSWORD={{ nextcloud_db_root_password }}
+      MARIADB_AUTO_UPGRADE=1
+      MYSQL_DATABASE={{ nextcloud_db_name }}
+      MYSQL_USER={{ nextcloud_db_user }}
+      MYSQL_PASSWORD={{ nextcloud_db_password }}
+      MYSQL_HOST=db
+      REDIS_HOST=redis
+      NEXTCLOUD_TRUSTED_DOMAINS={{ nextcloud_trusted_domains }}
+      PHP_MEMORY_LIMIT={{ nextcloud_php_memory_limit }}
+      PHP_UPLOAD_LIMIT={{ nextcloud_upload_limit }}
+      NEXTCLOUD_HTTP_PORT={{ nextcloud_http_port }}
+      NEXTCLOUD_MARIADB_IMAGE={{ nextcloud_mariadb_image }}
+      NEXTCLOUD_REDIS_IMAGE={{ nextcloud_redis_image }}
+      NEXTCLOUD_APP_IMAGE={{ nextcloud_app_image }}
+    # NEXTCLOUD_ADMIN_USER / NEXTCLOUD_ADMIN_PASSWORD deliberately absent:
+    # setting them triggers the install wizard, which mints a NEW secret and
+    # permanently breaks decryption of the migrated password vault.
+    owner: "{{ app_user }}"
+    mode: "0600"
+  no_log: true
+
+- name: Ensure source directory exists
+  file:
+    path: /opt/src
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0755"
+
+- name: Clone repo (forced SSH command)
+  become: true
+  become_user: "{{ app_user }}"
+  git:
+    repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v4.git"   # CONFIRM: matches the remote used by the other roles; update here (and there) if the rename to infra-eng-v4 has since changed it
+    dest: "{{ nextcloud_repo_dest }}"
+    version: dev
+    accept_hostkey: yes
+    key_file: "/home/{{ app_user }}/.ssh/id_ed25519_github"
+
+- name: Copy docker-compose
+  copy:
+    src: "{{ nextcloud_repo_dest }}/docker/nextcloud/docker-compose.yml"
+    dest: /opt/app/docker-compose.yml
+    remote_src: yes
+
+- name: Copy MariaDB tuning file
+  copy:
+    src: "{{ nextcloud_repo_dest }}/docker/nextcloud/mariadb-nextcloud.cnf"
+    dest: /opt/app/mariadb-nextcloud.cnf
+    remote_src: yes
+
+- name: Copy PHP overrides
+  copy:
+    src: "{{ nextcloud_repo_dest }}/docker/nextcloud/zz-nextcloud.ini"
+    dest: /opt/app/zz-nextcloud.ini
+    remote_src: yes
+
+# Rendered directly (not copied from the repo) because it embeds secrets,
+# and it is written BEFORE the app container's first start so the install
+# wizard can never run.
+- name: Render config.php (migration mode)
+  copy:
+    dest: /opt/app/config/config.php
+    owner: "33"
+    group: "33"
+    mode: "0640"
+    force: "{{ nextcloud_config_force | default(false) }}"
+    content: |
+      <?php
+      // 'secret', 'passwordsalt', 'instanceid' are carried over verbatim from
+      // the OLD instance. Not regenerable — the password vault's ciphertext
+      // is derived from 'secret'.
+      $CONFIG = array (
+        'instanceid' => '{{ nextcloud_instanceid }}',
+        'passwordsalt' => '{{ nextcloud_passwordsalt }}',
+        'secret' => '{{ nextcloud_secret }}',
+
+        'trusted_domains' =>
+        array (
+      {% for d in nextcloud_trusted_domains.split() %}
+          {{ loop.index0 }} => '{{ d }}',
+      {% endfor %}
+        ),
+
+        'datadirectory' => '/var/www/html/data',
+        'dbtype' => 'mysql',
+        'dbname' => '{{ nextcloud_db_name }}',
+        'dbhost' => 'db',
+        'dbtableprefix' => 'oc_',
+        'dbuser' => '{{ nextcloud_db_user }}',
+        'dbpassword' => '{{ nextcloud_db_password }}',
+        'mysql.utf8mb4' => true,
+
+        'memcache.local' => '\OC\Memcache\APCu',
+        'memcache.distributed' => '\OC\Memcache\Redis',
+        'memcache.locking' => '\OC\Memcache\Redis',
+        'redis' => array ( 'host' => 'redis', 'port' => 6379 ),
+
+        'trusted_proxies' => array ( 0 => '172.16.0.0/12' ),
+        'overwritehost' => '{{ nextcloud_overwrite_host }}',
+        'overwriteprotocol' => '{{ nextcloud_overwrite_protocol }}',
+
+        'log_type' => 'file',
+        'logfile' => '/var/log/nextcloud/nextcloud.log',
+        'loglevel' => 2,
+        'logtimezone' => 'America/Montreal',
+
+        'default_phone_region' => '{{ nextcloud_default_phone_region }}',
+        'maintenance' => false,
+        'installed' => true,
+      );
+  when: nextcloud_migration_mode | bool
+  no_log: true
+
+- name: Add user to docker group
+  user:
+    name: "{{ app_user }}"
+    groups: docker
+    append: yes
+
+- name: Start database and cache only
+  community.docker.docker_compose_v2:
+    project_src: /opt/app
+    services:
+      - db
+      - redis
+    state: present
+
+- name: Wait for MariaDB to accept connections
+  community.docker.docker_container_exec:
+    container: nextcloud-db
+    command: healthcheck.sh --connect --innodb_initialized
+  register: db_ready
+  retries: 30
+  delay: 5
+  until: db_ready.rc == 0
+
+- name: Count Nextcloud tables in the database
+  community.docker.docker_container_exec:
+    container: nextcloud-db
+    command: >-
+      mariadb -u root -p{{ nextcloud_db_root_password }}
+      -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ nextcloud_db_name }}';"
+  register: nc_table_count
+  changed_when: false
+  no_log: true
+
+- name: Halt if the dump has not been imported yet
+  fail:
+    msg: >-
+      Database '{{ nextcloud_db_name }}' is empty. Import the mysqldump from
+      the old instance, then re-run this role. Starting the app now would
+      trigger the install wizard, generate a NEW secret, and permanently
+      break decryption of the password vault.
+  when:
+    - nextcloud_migration_mode | bool
+    - (nc_table_count.stdout | default('0')) | trim | int == 0
+
+- name: Deploy containers (idempotent)
+  community.docker.docker_compose_v2:
+    project_src: /opt/app
+    build: policy
+
+- name: Wait for Nextcloud to answer
+  uri:
+    url: "http://localhost:{{ nextcloud_http_port }}/status.php"
+    status_code: 200
+  register: nc_status
+  retries: 30
+  delay: 10
+  until: nc_status.status == 200
+
+- name: Leave maintenance mode
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: php occ maintenance:mode --off
+  changed_when: false
+
+- name: Apply system config
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: "php occ config:system:set {{ item.key }} --value {{ item.value }}"
+  loop:
+    - { key: default_phone_region, value: "{{ nextcloud_default_phone_region }}" }
+    - { key: overwritehost, value: "{{ nextcloud_overwrite_host }}" }
+    - { key: overwriteprotocol, value: "{{ nextcloud_overwrite_protocol }}" }
+    - { key: "trusted_proxies 0", value: "172.16.0.0/12" }
+  changed_when: false
+
+- name: Background jobs via cron
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: php occ background:cron
+  changed_when: false
+
+- name: Enable brute-force protection and TOTP apps
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: "php occ app:enable {{ item }}"
+  loop:
+    - bruteforcesettings
+    - twofactor_totp
+  changed_when: false
+  failed_when: false
+
+- name: Post-restore repair and rescan
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: "php occ {{ item }}"
+  loop:
+    - "maintenance:repair --include-expensive"
+    - "db:add-missing-indices"
+    - "files:scan --all"
+  changed_when: false
+  when: nextcloud_migration_mode | bool
+
+- name: Apply per-user quotas
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: "php occ user:setting {{ item.user }} files quota '{{ item.quota }}'"
+  loop: "{{ nextcloud_users_quota }}"
+  changed_when: false
+  failed_when: false
+
+- name: Host cron for Nextcloud background jobs
+  cron:
+    name: nextcloud-cron
+    minute: "*/5"
+    job: "/usr/bin/docker exec -u www-data nextcloud-app php -f /var/www/html/cron.php"
