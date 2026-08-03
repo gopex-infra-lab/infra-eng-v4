@@ -218,6 +218,7 @@ jobs:
           ansible-playbook site.yml \
             -i ${{ steps.env.outputs.INV }} \
             --private-key ~/.ssh/id_ed25519_infra \
+            ${{ github.event.inputs.ansible_tags != '' && format('--tags {0}', github.event.inputs.ansible_tags) || '' }} \
             -e env=${{ github.event.inputs.environment }} \
             -e fastapi_postgres_db=$FASTAPI_POSTGRES_DB \
             -e fastapi_postgres_user=$FASTAPI_POSTGRES_USER \
