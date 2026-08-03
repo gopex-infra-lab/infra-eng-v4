@@ -28,11 +28,11 @@ on:
           - destroy
           - plan
           - import-db-nextcloud
-      
-        ansible_tags:                 # NEW
-          description: "ansible tags to run (blank = current behavior)"
-          required: false
-          default: ""
+
+      ansible_tags:
+        description: "ansible tags to run (blank = current behavior)"
+        required: false
+        default: ""
 
 concurrency:
   group: terraform-${{ github.ref }}
@@ -48,7 +48,7 @@ jobs:
         run: |
           echo "Pull requests to main are not allowed. Please open a PR to dev branch."
           exit 1
-  
+
   import-db-nextcloud:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'import-db-nextcloud'
     runs-on: [self-hosted, Linux, X64]
@@ -101,7 +101,7 @@ jobs:
       - name: Shred the local dump
         if: always()
         run: shred -u nextcloud.sql || rm -f nextcloud.sql
-  
+
   deploy:
     if: |
       github.event_name == 'pull_request' ||
@@ -129,7 +129,7 @@ jobs:
 
       - name: Checkout repo
         uses: actions/checkout@v4
-      
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -160,8 +160,8 @@ jobs:
           (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         working-directory: ${{ steps.env.outputs.DIR }}
-        run: terraform apply -auto-approve -input=false -parallelism=1 #tfplan
-      
+        run: terraform apply -auto-approve -parallelism=1 tfplan
+
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
         working-directory: ${{ steps.env.outputs.DIR }}
@@ -182,21 +182,24 @@ jobs:
           mkdir -p ~/.ssh
           printf "%s\n" "${{ secrets.INFRA_PRIVATE_KEY }}" > ~/.ssh/id_ed25519_infra
           chmod 600 ~/.ssh/id_ed25519_infra
-      
-      # --- temporary diagnostic steps, remove once resolved ---
+
+      # --- temporary diagnostics: manual runs only, remove once resolved ---
       - name: Check for a stray core-immich VM on pve3
+        if: github.event_name == 'workflow_dispatch'
         run: |
           ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            root@<pve3-ip> "qm list"
+            root@192.168.0.254 "qm list"
 
       - name: Check Terraform state for core-immich
+        if: github.event_name == 'workflow_dispatch'
         working-directory: core-infra
         run: terraform state list | grep immich || echo "not in state"
 
       - name: Get nextcloud clone task error detail
+        if: github.event_name == 'workflow_dispatch'
         run: |
           ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            root@<pve1-ip> "pvesh get /cluster/tasks | grep -i error | tail -5"
+            root@192.168.0.253 "pvesh get /cluster/tasks | grep -i error | tail -5"
       # --- end diagnostics ---
 
       - name: Generate AWS inventory
@@ -213,7 +216,7 @@ jobs:
           [aws:vars]
           app_user=ec2-user
           EOF
-          
+
       - name: Run Ansible
         if: github.event.inputs.action != 'destroy'
         working-directory: ansible
@@ -234,6 +237,7 @@ jobs:
           ansible-playbook site.yml \
             -i ${{ steps.env.outputs.INV }} \
             --private-key ~/.ssh/id_ed25519_infra \
+            ${{ github.event.inputs.ansible_tags != '' && format('--tags {0}', github.event.inputs.ansible_tags) || '' }} \
             -e env=${{ github.event.inputs.environment }} \
             -e fastapi_postgres_db=$FASTAPI_POSTGRES_DB \
             -e fastapi_postgres_user=$FASTAPI_POSTGRES_USER \
