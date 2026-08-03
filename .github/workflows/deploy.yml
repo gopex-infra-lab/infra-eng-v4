@@ -150,33 +150,17 @@ jobs:
       - name: Terraform Init
         working-directory: ${{ steps.env.outputs.DIR }}
         run: terraform init -input=false
-        
-      # --- temporary diagnostic steps, remove once resolved ---
-      - name: Check for a stray core-immich VM on pve3
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            root@<pve3-ip> "qm list"
-
-      - name: Check Terraform state for core-immich
-        working-directory: core-infra
-        run: terraform state list | grep immich || echo "not in state"
-
-      - name: Get nextcloud clone task error detail
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            root@<pve1-ip> "pvesh get /cluster/tasks | grep -i error | tail -5"
-      # --- end diagnostics ---
 
       - name: Terraform Plan
         working-directory: ${{ steps.env.outputs.DIR }}
-        run: terraform plan -input=false -out=tfplan -parallelism=1
+        run: terraform plan -input=false -out=tfplan
 
       - name: Terraform Apply
         if: |
           (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         working-directory: ${{ steps.env.outputs.DIR }}
-        run: terraform apply -auto-approve -input=false -parallelism=1 #tfplan
+        run: terraform apply -auto-approve tfplan
       
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
