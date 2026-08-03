@@ -28,11 +28,11 @@ on:
           - destroy
           - plan
           - import-db-nextcloud
-
-      ansible_tags:
-        description: "ansible tags to run (blank = current behavior)"
-        required: false
-        default: ""
+      
+        ansible_tags:                 # NEW
+          description: "ansible tags to run (blank = current behavior)"
+          required: false
+          default: ""
 
 concurrency:
   group: terraform-${{ github.ref }}
@@ -48,7 +48,7 @@ jobs:
         run: |
           echo "Pull requests to main are not allowed. Please open a PR to dev branch."
           exit 1
-
+  
   import-db-nextcloud:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'import-db-nextcloud'
     runs-on: [self-hosted, Linux, X64]
@@ -101,7 +101,7 @@ jobs:
       - name: Shred the local dump
         if: always()
         run: shred -u nextcloud.sql || rm -f nextcloud.sql
-
+  
   deploy:
     if: |
       github.event_name == 'pull_request' ||
@@ -129,7 +129,7 @@ jobs:
 
       - name: Checkout repo
         uses: actions/checkout@v4
-
+      
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -150,54 +150,34 @@ jobs:
       - name: Terraform Init
         working-directory: ${{ steps.env.outputs.DIR }}
         run: terraform init -input=false
+        
+      # --- temporary diagnostic steps, remove once resolved ---
+      - name: Check for a stray core-immich VM on pve3
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
+            root@<pve3-ip> "qm list"
 
-      - name: Backup Terraform state
-        if: steps.env.outputs.DIR == 'core-infra'
-        working-directory: ${{ steps.env.outputs.DIR }}
-        run: cp terraform.tfstate terraform.tfstate.bak.$(date +%s) 2>/dev/null || true
+      - name: Check Terraform state for core-immich
+        working-directory: core-infra
+        run: terraform state list | grep immich || echo "not in state"
+
+      - name: Get nextcloud clone task error detail
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
+            root@<pve1-ip> "pvesh get /cluster/tasks | grep -i error | tail -5"
+      # --- end diagnostics ---
 
       - name: Terraform Plan
         working-directory: ${{ steps.env.outputs.DIR }}
         run: terraform plan -input=false -out=tfplan -parallelism=1
 
-      # TF_LOG=DEBUG captures the raw Proxmox API response, including the
-      # specific rejected parameter. "400 Parameter verification failed" is a
-      # SYNCHRONOUS validation error, not a background task — there is no
-      # Proxmox task log for it, which is why the earlier pvesh-based
-      # diagnostics never found anything useful. This is the only way to see
-      # the actual detail.
-      - name: Terraform Apply (debug)
+      - name: Terraform Apply
         if: |
           (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         working-directory: ${{ steps.env.outputs.DIR }}
-        env:
-          TF_LOG: DEBUG
-        run: |
-          terraform apply -auto-approve -parallelism=1 tfplan 2>&1 | tee tf-apply-debug.log
-          exit_code=${PIPESTATUS[0]}
-          exit $exit_code
-
-      # Runs regardless of whether apply succeeded or failed, so the relevant
-      # excerpt shows up directly in this run's log — no artifact download
-      # needed. Prints the 80 lines before the "400" error, which is where
-      # the raw request/response body for the rejected call lives.
-      - name: Show debug context around the 400 error
-        if: always() && steps.env.outputs.DIR == 'core-infra'
-        working-directory: ${{ steps.env.outputs.DIR }}
-        run: |
-          if [ -f tf-apply-debug.log ]; then
-            grep -B 80 "400 Parameter verification failed" tf-apply-debug.log | tail -100
-          else
-            echo "no debug log produced (apply may not have run)"
-          fi
-      - name: Get Proxmox's own validation error for nextcloud
-        if: always() && steps.env.outputs.DIR == 'core-infra'
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            root@192.168.0.253 \
-            "journalctl -u pvedaemon -u pveproxy --since '2026-08-03 02:42:00' --until '2026-08-03 02:43:00' --no-pager"
-
+        run: terraform apply -auto-approve -input=false -parallelism=1 #tfplan
+      
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
         working-directory: ${{ steps.env.outputs.DIR }}
@@ -233,7 +213,7 @@ jobs:
           [aws:vars]
           app_user=ec2-user
           EOF
-
+          
       - name: Run Ansible
         if: github.event.inputs.action != 'destroy'
         working-directory: ansible
@@ -254,7 +234,6 @@ jobs:
           ansible-playbook site.yml \
             -i ${{ steps.env.outputs.INV }} \
             --private-key ~/.ssh/id_ed25519_infra \
-            ${{ github.event.inputs.ansible_tags != '' && format('--tags {0}', github.event.inputs.ansible_tags) || '' }} \
             -e env=${{ github.event.inputs.environment }} \
             -e fastapi_postgres_db=$FASTAPI_POSTGRES_DB \
             -e fastapi_postgres_user=$FASTAPI_POSTGRES_USER \

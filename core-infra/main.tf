@@ -14,9 +14,6 @@ module "core" {
   template_name = each.value.template_name
   full_clone    = each.value.full_clone
 
-  storage      = try(each.value.storage, null)
-  disk_size_gb = try(each.value.disk_size_gb, 20)
-
   # keep your current keys
   infra_public_key  = var.infra_public_key
   infra_private_key = var.infra_private_key
