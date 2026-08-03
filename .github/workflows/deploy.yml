@@ -147,22 +147,22 @@ jobs:
             echo "INV=inventory/lab.ini" >> $GITHUB_OUTPUT
           fi
 
-      # Only the core-infra environment needs a newer provider release (the
-      # pve3 node runs PVE 8.1.4, unlike pve1/pve2 on 7.1-7, and the pinned
-      # 2.9.14 release panics parsing that node's post-create API response).
-      # Scoped to core-infra's own lock file — lab/ and aws/ are untouched,
-      # so core-avelo and anything else already running is unaffected.
-      - name: Terraform Init (upgrade provider for core)
-        if: steps.env.outputs.DIR == 'core-infra'
-        working-directory: core-infra
-        run: |
-          rm -f .terraform.lock.hcl
-          terraform init -upgrade -input=false
-
+      # Provider version bump REVERTED — it decoded core-avelo's existing
+      # state under an incompatible schema ("unsupported attribute 'bridge'",
+      # disk block field meanings changed) and risked a plan that would
+      # destroy/recreate a VM that's already running real workloads. Back to
+      # plain init, which uses core-infra/.terraform.lock.hcl as committed.
       - name: Terraform Init
-        if: steps.env.outputs.DIR != 'core-infra'
         working-directory: ${{ steps.env.outputs.DIR }}
         run: terraform init -input=false
+
+      # Non-destructive safety net before plan/apply can touch anything.
+      # Adjust the source path if core-infra's backend stores state
+      # somewhere other than the working directory (check backend.tf).
+      - name: Backup Terraform state
+        if: steps.env.outputs.DIR == 'core-infra'
+        working-directory: ${{ steps.env.outputs.DIR }}
+        run: cp terraform.tfstate terraform.tfstate.bak.$(date +%s) 2>/dev/null || true
 
       - name: Terraform Plan
         working-directory: ${{ steps.env.outputs.DIR }}
@@ -208,6 +208,14 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
             root@192.168.0.253 "qm list"
+
+      - name: Check whether core-immich's disk actually landed on pve2
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
+            root@192.168.0.254 "qm list" | awk '/core-immich/ {print $1}' | \
+            xargs -I{} ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
+              root@<pve2-ip> "qm config {}" || echo "no matching VM found on pve2"
 
       - name: Check Terraform state for core-immich and core-nextcloud
         if: always() && github.event_name == 'workflow_dispatch'
