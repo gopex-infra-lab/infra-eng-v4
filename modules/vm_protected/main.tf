@@ -46,10 +46,10 @@ resource "proxmox_vm_qemu" "core" {
   dynamic "disk" {
     for_each = var.storage != null ? [1] : []
     content {
-      slot    = "scsi0"
-      type    = "disk"
+      type    = "scsi0"
       storage = var.storage
       size    = "${var.disk_size_gb}G"
+      slot    = 0
     }
   }
 
