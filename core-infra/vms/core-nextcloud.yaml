@@ -1,4 +1,4 @@
-vm_name: core-nextcloud
+vm_name: core-nexcloud
 memory_mb: 4096
 cpu_cores: 4
 disk_size_gb: 20
