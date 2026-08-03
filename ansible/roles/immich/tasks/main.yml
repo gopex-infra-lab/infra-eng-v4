@@ -32,6 +32,7 @@
       DB_PASSWORD={{ immich_db_password }}
       DB_USERNAME={{ immich_db_user }}
       DB_DATABASE_NAME={{ immich_db_name }}
+      DB_HOSTNAME=db
       UPLOAD_LOCATION={{ nfs_mounts[0].path }}
       IMMICH_VERSION={{ immich_version }}
       IMMICH_DB_IMAGE={{ immich_db_image }}
