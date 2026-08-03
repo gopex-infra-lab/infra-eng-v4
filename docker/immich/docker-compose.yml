@@ -61,7 +61,7 @@ services:
       POSTGRES_DB: ${DB_DATABASE_NAME}
       POSTGRES_INITDB_ARGS: "--data-checksums"
     volumes:
-      - ./postgres:/var/lib/postgresql/data
+      - immich_pgdata:/var/lib/postgresql/data
     networks:
       - immich_net
     security_opt:
@@ -75,3 +75,6 @@ services:
 networks:
   immich_net:
     driver: bridge
+
+volumes:
+  immich_pgdata:

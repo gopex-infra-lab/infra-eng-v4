@@ -22,7 +22,6 @@
     owner: "{{ app_user }}"
     mode: "0750"
   loop:
-    - /opt/app/postgres
     - /opt/app/ml-cache
 
 - name: Create .env file
