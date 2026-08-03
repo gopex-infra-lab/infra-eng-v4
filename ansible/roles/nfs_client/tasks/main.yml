@@ -1,0 +1,64 @@
+# ansible/roles/nfs_client/tasks/main.yml
+- name: Install NFS client
+  apt:
+    name: nfs-common
+    state: present
+    update_cache: yes
+
+- name: Create mount points
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ nfs_mounts }}"
+
+# systemd mount + automount units instead of fstab: gives docker.service an
+# explicit dependency edge, and a NAS reboot cannot wedge VM boot.
+- name: Deploy systemd .mount units
+  template:
+    src: nfs.mount.j2
+    dest: "/etc/systemd/system/{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.mount"
+    mode: "0644"
+  loop: "{{ nfs_mounts }}"
+  notify: reload systemd
+
+- name: Deploy systemd .automount units
+  template:
+    src: nfs.automount.j2
+    dest: "/etc/systemd/system/{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.automount"
+    mode: "0644"
+  loop: "{{ nfs_mounts }}"
+  notify: reload systemd
+
+- name: Flush handlers before enabling units
+  meta: flush_handlers
+
+- name: Enable and start automount units
+  systemd:
+    name: "{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.automount"
+    enabled: true
+    state: started
+  loop: "{{ nfs_mounts }}"
+
+# Containers must never start against an empty mountpoint — data would land
+# on the local disk while the app believes it is on the NAS.
+- name: Ensure docker.service waits for the NFS mounts
+  copy:
+    dest: /etc/systemd/system/docker.service.d/nfs-deps.conf
+    mode: "0644"
+    content: |
+      [Unit]
+      {% for m in nfs_mounts %}
+      RequiresMountsFor={{ m.path }}
+      {% endfor %}
+  notify:
+    - reload systemd
+    - restart docker
+
+- name: Flush handlers so docker picks up the dependency before we continue
+  meta: flush_handlers
+
+- name: Verify each mount is actually NFS (fail fast, not silently local)
+  command: "findmnt -t nfs4 --target {{ item.path }}"
+  changed_when: false
+  loop: "{{ nfs_mounts }}"

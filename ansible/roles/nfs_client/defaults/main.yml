@@ -1,0 +1,4 @@
+---
+nas_host: 192.168.0.22
+nfs_mount_options: "nfsvers=4.1,hard,noatime,timeo=150,retrans=3,_netdev"
+nfs_mounts: []
