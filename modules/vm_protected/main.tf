@@ -50,6 +50,8 @@ resource "proxmox_vm_qemu" "core" {
   cicustom   = "user=local:snippets/${var.vm_name}.yml"
   full_clone = var.full_clone
 
+  additional_wait = 15
+
   depends_on = [
     null_resource.upload_snippet
   ]
