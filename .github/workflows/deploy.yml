@@ -147,18 +147,10 @@ jobs:
             echo "INV=inventory/lab.ini" >> $GITHUB_OUTPUT
           fi
 
-      # Provider version bump REVERTED — it decoded core-avelo's existing
-      # state under an incompatible schema ("unsupported attribute 'bridge'",
-      # disk block field meanings changed) and risked a plan that would
-      # destroy/recreate a VM that's already running real workloads. Back to
-      # plain init, which uses core-infra/.terraform.lock.hcl as committed.
       - name: Terraform Init
         working-directory: ${{ steps.env.outputs.DIR }}
         run: terraform init -input=false
 
-      # Non-destructive safety net before plan/apply can touch anything.
-      # Adjust the source path if core-infra's backend stores state
-      # somewhere other than the working directory (check backend.tf).
       - name: Backup Terraform state
         if: steps.env.outputs.DIR == 'core-infra'
         working-directory: ${{ steps.env.outputs.DIR }}
@@ -168,12 +160,37 @@ jobs:
         working-directory: ${{ steps.env.outputs.DIR }}
         run: terraform plan -input=false -out=tfplan -parallelism=1
 
-      - name: Terraform Apply
+      # TF_LOG=DEBUG captures the raw Proxmox API response, including the
+      # specific rejected parameter. "400 Parameter verification failed" is a
+      # SYNCHRONOUS validation error, not a background task — there is no
+      # Proxmox task log for it, which is why the earlier pvesh-based
+      # diagnostics never found anything useful. This is the only way to see
+      # the actual detail.
+      - name: Terraform Apply (debug)
         if: |
           (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         working-directory: ${{ steps.env.outputs.DIR }}
-        run: terraform apply -auto-approve -parallelism=1 tfplan
+        env:
+          TF_LOG: DEBUG
+        run: |
+          terraform apply -auto-approve -parallelism=1 tfplan 2>&1 | tee tf-apply-debug.log
+          exit_code=${PIPESTATUS[0]}
+          exit $exit_code
+
+      # Runs regardless of whether apply succeeded or failed, so the relevant
+      # excerpt shows up directly in this run's log — no artifact download
+      # needed. Prints the 80 lines before the "400" error, which is where
+      # the raw request/response body for the rejected call lives.
+      - name: Show debug context around the 400 error
+        if: always() && steps.env.outputs.DIR == 'core-infra'
+        working-directory: ${{ steps.env.outputs.DIR }}
+        run: |
+          if [ -f tf-apply-debug.log ]; then
+            grep -B 80 "400 Parameter verification failed" tf-apply-debug.log | tail -100
+          else
+            echo "no debug log produced (apply may not have run)"
+          fi
 
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
@@ -195,52 +212,6 @@ jobs:
           mkdir -p ~/.ssh
           printf "%s\n" "${{ secrets.INFRA_PRIVATE_KEY }}" > ~/.ssh/id_ed25519_infra
           chmod 600 ~/.ssh/id_ed25519_infra
-
-      # --- temporary diagnostics: manual runs only, remove once resolved ---
-      - name: Check for a stray core-immich VM on pve3
-        if: always() && github.event_name == 'workflow_dispatch'
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            root@192.168.0.254 "qm list"
-
-      - name: Check for a stray core-nextcloud VM on pve1
-        if: always() && github.event_name == 'workflow_dispatch'
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            root@192.168.0.253 "qm list"
-
-      - name: Check whether core-immich's disk actually landed on pve2
-        if: always() && github.event_name == 'workflow_dispatch'
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            root@192.168.0.254 "qm list" | awk '/core-immich/ {print $1}' | \
-            xargs -I{} ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-              root@<pve2-ip> "qm config {}" || echo "no matching VM found on pve2"
-
-      - name: Check Terraform state for core-immich and core-nextcloud
-        if: always() && github.event_name == 'workflow_dispatch'
-        working-directory: core-infra
-        run: |
-          terraform state list | grep -E "immich|nextcloud" || echo "not in state"
-
-      # Lists recent qm-related tasks on pve1 so we can find the UPID of the
-      # failed nextcloud clone/reconfigure task without guessing.
-      - name: List recent qm tasks on pve1
-        if: always() && github.event_name == 'workflow_dispatch'
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            root@192.168.0.253 \
-            "pvesh get /nodes/pve1/tasks --limit 20 --output-format json \
-             | python3 -c 'import sys,json; [print(t[\"upid\"], t.get(\"status\",\"\")) for t in json.load(sys.stdin) if \"qm\" in t[\"upid\"]]'"
-
-      # Once the UPID for the failed task is known from the step above,
-      # replace <UPID> below and re-run to get the actual rejected parameter.
-      - name: Get full task log for the failed nextcloud task
-        if: always() && github.event_name == 'workflow_dispatch'
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            root@192.168.0.253 "pvesh get /nodes/pve1/tasks/<UPID>/log"
-      # --- end diagnostics ---
 
       - name: Generate AWS inventory
         if: steps.env.outputs.DIR == 'aws'
