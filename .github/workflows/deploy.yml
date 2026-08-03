@@ -153,14 +153,14 @@ jobs:
 
       - name: Terraform Plan
         working-directory: ${{ steps.env.outputs.DIR }}
-        run: terraform plan -input=false -out=tfplan
+        run: terraform plan -input=false -out=tfplan parallelism=1
 
       - name: Terraform Apply
         if: |
           (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         working-directory: ${{ steps.env.outputs.DIR }}
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve -input=false -parallelism=1 #tfplan
       
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
