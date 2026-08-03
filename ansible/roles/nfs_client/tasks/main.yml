@@ -40,12 +40,6 @@
     state: started
   loop: "{{ nfs_mounts }}"
 
-- name: Ensure docker.service.d directory exists
-  file:
-    path: /etc/systemd/system/docker.service.d
-    state: directory
-    mode: "0755"
-
 # Containers must never start against an empty mountpoint — data would land
 # on the local disk while the app believes it is on the NAS.
 - name: Ensure docker.service waits for the NFS mounts
@@ -63,6 +57,15 @@
 
 - name: Flush handlers so docker picks up the dependency before we continue
   meta: flush_handlers
+
+# .automount units don't mount anything on `systemctl start` — they only
+# register a trigger that fires on first access. Touch the path so the
+# automount actually fires before we check it, otherwise the next task
+# always finds nothing mounted yet.
+- name: Trigger the automount by accessing each path
+  command: "stat {{ item.path }}"
+  changed_when: false
+  loop: "{{ nfs_mounts }}"
 
 - name: Verify each mount is actually NFS (fail fast, not silently local)
   command: "findmnt -t nfs4 --target {{ item.path }}"
