@@ -27,6 +27,12 @@ on:
           - apply
           - destroy
           - plan
+          - import-db-nextcloud
+      
+        ansible_tags:                 # NEW
+          description: "ansible tags to run (blank = current behavior)"
+          required: false
+          default: ""
 
 concurrency:
   group: terraform-${{ github.ref }}
@@ -42,6 +48,59 @@ jobs:
         run: |
           echo "Pull requests to main are not allowed. Please open a PR to dev branch."
           exit 1
+  
+  import-db-nextcloud:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'import-db-nextcloud'
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - name: Fix workspace permissions
+        run: sudo chown -R $USER:$USER $GITHUB_WORKSPACE || true
+
+      - name: Place infra SSH key (reaches core-nextcloud)
+        run: |
+          mkdir -p ~/.ssh
+          printf "%s\n" "${{ secrets.INFRA_PRIVATE_KEY }}" > ~/.ssh/id_ed25519_infra
+          chmod 600 ~/.ssh/id_ed25519_infra
+
+      - name: Place OLD-instance SSH key
+        run: |
+          printf "%s\n" "${{ secrets.OLD_NEXTCLOUD_SSH_KEY }}" > ~/.ssh/id_old_nextcloud
+          chmod 600 ~/.ssh/id_old_nextcloud
+
+      - name: Put the OLD instance into maintenance mode
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_old_nextcloud \
+            "${{ secrets.OLD_NEXTCLOUD_SSH_USER }}@${{ secrets.OLD_NEXTCLOUD_HOST }}" \
+            "${{ secrets.OLD_NEXTCLOUD_OCC_CMD }} maintenance:mode --on"
+
+      - name: Dump the OLD database over SSH
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_old_nextcloud \
+            "${{ secrets.OLD_NEXTCLOUD_SSH_USER }}@${{ secrets.OLD_NEXTCLOUD_HOST }}" \
+            "mysqldump --single-transaction --default-character-set=utf8mb4 ${{ secrets.OLD_NEXTCLOUD_DB_NAME }}" \
+            > nextcloud.sql
+          test -s nextcloud.sql
+
+      - name: rsync the OLD data directory onto the NAS
+        run: |
+          rsync -az --delete -e "ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_old_nextcloud" \
+            "${{ secrets.OLD_NEXTCLOUD_SSH_USER }}@${{ secrets.OLD_NEXTCLOUD_HOST }}:${{ secrets.OLD_NEXTCLOUD_DATA_PATH }}/" \
+            /mnt/pve/nas/nextcloud-data/
+          # CONFIRM the runner can reach this NAS path directly; if not,
+          # route via core-nextcloud instead.
+
+      - name: Import the dump into the NEW database container
+        run: |
+          scp -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
+            nextcloud.sql "${{ secrets.TF_VAR_ANSIBLE_USER }}@192.168.0.190:/tmp/nextcloud.sql"
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
+            "${{ secrets.TF_VAR_ANSIBLE_USER }}@192.168.0.190" \
+            "docker exec -i nextcloud-db mariadb -u root -p'${{ secrets.NEXTCLOUD_DB_ROOT_PASSWORD }}' \
+             ${{ secrets.OLD_NEXTCLOUD_DB_NAME }} < /tmp/nextcloud.sql && rm /tmp/nextcloud.sql"
+
+      - name: Shred the local dump
+        if: always()
+        run: shred -u nextcloud.sql || rm -f nextcloud.sql
   
   deploy:
     if: |
@@ -149,6 +208,12 @@ jobs:
           BIXI_POSTGRES_DB:          ${{ vars.BIXI_POSTGRES_DB }}
           BIXI_POSTGRES_USER:        ${{ vars.BIXI_POSTGRES_USER }}
           BIXI_POSTGRES_PASSWORD:    ${{ secrets.BIXI_POSTGRES_PASSWORD }}
+          NEXTCLOUD_DB_PASSWORD:      ${{ secrets.NEXTCLOUD_DB_PASSWORD }}
+          NEXTCLOUD_DB_ROOT_PASSWORD: ${{ secrets.NEXTCLOUD_DB_ROOT_PASSWORD }}
+          NEXTCLOUD_SECRET:           ${{ secrets.NEXTCLOUD_SECRET }}
+          NEXTCLOUD_PASSWORDSALT:     ${{ secrets.NEXTCLOUD_PASSWORDSALT }}
+          NEXTCLOUD_INSTANCEID:       ${{ secrets.NEXTCLOUD_INSTANCEID }}
+          IMMICH_DB_PASSWORD:         ${{ secrets.IMMICH_DB_PASSWORD }}
         run: |
           ansible-playbook site.yml \
             -i ${{ steps.env.outputs.INV }} \
@@ -160,4 +225,10 @@ jobs:
             -e bixi_postgres_db=$BIXI_POSTGRES_DB \
             -e bixi_postgres_user=$BIXI_POSTGRES_USER \
             -e bixi_postgres_password=$BIXI_POSTGRES_PASSWORD \
-            -e app_user=$TF_VAR_ansible_user
+            -e app_user=$TF_VAR_ansible_user \
+            -e "nextcloud_db_password=$NEXTCLOUD_DB_PASSWORD" \
+            -e "nextcloud_db_root_password=$NEXTCLOUD_DB_ROOT_PASSWORD" \
+            -e "nextcloud_secret=$NEXTCLOUD_SECRET" \
+            -e "nextcloud_passwordsalt=$NEXTCLOUD_PASSWORDSALT" \
+            -e "nextcloud_instanceid=$NEXTCLOUD_INSTANCEID" \
+            -e "immich_db_password=$IMMICH_DB_PASSWORD"

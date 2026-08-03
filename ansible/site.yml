@@ -54,3 +54,21 @@
   roles:
     - role: avelo_app
       tags: [avelo, never]
+  
+- hosts: nextcloud
+  become: true
+  tags: [nextcloud, never]
+  roles:
+    - role: nfs_client
+      tags: [nextcloud, never]
+    - role: nextcloud
+      tags: [nextcloud, never]
+ 
+- hosts: immich
+  become: true
+  tags: [immich, never]
+  roles:
+    - role: nfs_client
+      tags: [immich, never]
+    - role: immich
+      tags: [immich, never]
