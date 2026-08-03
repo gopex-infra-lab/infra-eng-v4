@@ -2,6 +2,18 @@ variable "vm_name" {
   description = "Name of the virtual machine"
   type        = string
 }
+
+variable "storage" {
+  description = "Target storage ID for the VM's disk (overrides whatever the template's own disk uses). Leave null to keep current behavior (inherit the template's storage)."
+  type        = string
+  default     = null
+}
+
+variable "disk_size_gb" {
+  description = "Size of the disk in GB (overrides whatever the template's own disk size is). Leave null to keep current behavior (inherit the template's disk size)."
+  type        = number
+  default     = null
+}
 variable "target_node" {
   description = "Proxmox node where the VM will be deployed"
   type        = string

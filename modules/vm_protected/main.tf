@@ -43,6 +43,16 @@ resource "proxmox_vm_qemu" "core" {
     firewall = true
   }
 
+  dynamic "disk" {
+    for_each = var.storage != null ? [1] : []
+    content {
+      type    = "scsi0"
+      storage = var.storage
+      size    = "${var.disk_size_gb}G"
+      slot    = 0
+    }
+  }
+
   ipconfig0  = var.ipconfig0
   nameserver = "192.168.0.252"
   agent      = 1
