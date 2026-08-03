@@ -29,10 +29,10 @@ on:
           - plan
           - import-db-nextcloud
       
-        ansible_tags:                 # NEW
-          description: "ansible tags to run (blank = current behavior)"
-          required: false
-          default: ""
+      ansible_tags:                 # NEW
+        description: "ansible tags to run (blank = current behavior)"
+        required: false
+        default: ""
 
 concurrency:
   group: terraform-${{ github.ref }}
