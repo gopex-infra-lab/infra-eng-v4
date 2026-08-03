@@ -76,7 +76,7 @@
   become: true
   tags: [immich, never]
   vars:
-    nas_host: "{{ nas_host | default('192.168.0.22') }}"
+    nas_host: "192.168.0.22"
     immich_nfs_export: "{{ immich_nfs_export | default('/volume1/immich-library') }}"
     immich_nfs_path: "{{ immich_nfs_path | default('/mnt/nas/immich') }}"
   roles:
