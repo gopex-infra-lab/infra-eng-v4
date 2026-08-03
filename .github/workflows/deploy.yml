@@ -185,18 +185,18 @@ jobs:
 
       # --- temporary diagnostics: manual runs only, remove once resolved ---
       - name: Check for a stray core-immich VM on pve3
-        if: github.event_name == 'workflow_dispatch'
+        if: always() && github.event_name == 'workflow_dispatch'
         run: |
           ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
             root@192.168.0.254 "qm list"
 
       - name: Check Terraform state for core-immich
-        if: github.event_name == 'workflow_dispatch'
+        if: always() && github.event_name == 'workflow_dispatch'
         working-directory: core-infra
         run: terraform state list | grep immich || echo "not in state"
 
       - name: Get nextcloud clone task error detail
-        if: github.event_name == 'workflow_dispatch'
+        if: always() && github.event_name == 'workflow_dispatch'
         run: |
           ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
             root@192.168.0.253 "pvesh get /cluster/tasks | grep -i error | tail -5"
