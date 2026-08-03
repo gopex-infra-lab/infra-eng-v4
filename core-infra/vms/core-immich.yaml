@@ -1,9 +1,0 @@
-vm_name: core-immich
-memory_mb: 8192
-cpu_cores: 4
-disk_size_gb: 20
-target_node: pve3
-target_node_ip: 192.168.0.254
-ip: 192.168.0.216
-ipconfig0: ip=192.168.0.216/24,gw=192.168.0.252
-role: ["all", "immich"]
