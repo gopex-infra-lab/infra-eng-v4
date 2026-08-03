@@ -147,7 +147,20 @@ jobs:
             echo "INV=inventory/lab.ini" >> $GITHUB_OUTPUT
           fi
 
+      # Only the core-infra environment needs a newer provider release (the
+      # pve3 node runs PVE 8.1.4, unlike pve1/pve2 on 7.1-7, and the pinned
+      # 2.9.14 release panics parsing that node's post-create API response).
+      # Scoped to core-infra's own lock file — lab/ and aws/ are untouched,
+      # so core-avelo and anything else already running is unaffected.
+      - name: Terraform Init (upgrade provider for core)
+        if: steps.env.outputs.DIR == 'core-infra'
+        working-directory: core-infra
+        run: |
+          rm -f .terraform.lock.hcl
+          terraform init -upgrade -input=false
+
       - name: Terraform Init
+        if: steps.env.outputs.DIR != 'core-infra'
         working-directory: ${{ steps.env.outputs.DIR }}
         run: terraform init -input=false
 
@@ -190,16 +203,35 @@ jobs:
           ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
             root@192.168.0.254 "qm list"
 
-      - name: Check Terraform state for core-immich
-        if: always() && github.event_name == 'workflow_dispatch'
-        working-directory: core-infra
-        run: terraform state list | grep immich || echo "not in state"
-
-      - name: Get nextcloud clone task error detail
+      - name: Check for a stray core-nextcloud VM on pve1
         if: always() && github.event_name == 'workflow_dispatch'
         run: |
           ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            root@192.168.0.253 "pvesh get /cluster/tasks | grep -i error | tail -5"
+            root@192.168.0.253 "qm list"
+
+      - name: Check Terraform state for core-immich and core-nextcloud
+        if: always() && github.event_name == 'workflow_dispatch'
+        working-directory: core-infra
+        run: |
+          terraform state list | grep -E "immich|nextcloud" || echo "not in state"
+
+      # Lists recent qm-related tasks on pve1 so we can find the UPID of the
+      # failed nextcloud clone/reconfigure task without guessing.
+      - name: List recent qm tasks on pve1
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
+            root@192.168.0.253 \
+            "pvesh get /nodes/pve1/tasks --limit 20 --output-format json \
+             | python3 -c 'import sys,json; [print(t[\"upid\"], t.get(\"status\",\"\")) for t in json.load(sys.stdin) if \"qm\" in t[\"upid\"]]'"
+
+      # Once the UPID for the failed task is known from the step above,
+      # replace <UPID> below and re-run to get the actual rejected parameter.
+      - name: Get full task log for the failed nextcloud task
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
+            root@192.168.0.253 "pvesh get /nodes/pve1/tasks/<UPID>/log"
       # --- end diagnostics ---
 
       - name: Generate AWS inventory
