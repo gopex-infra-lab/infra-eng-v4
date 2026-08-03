@@ -191,6 +191,12 @@ jobs:
           else
             echo "no debug log produced (apply may not have run)"
           fi
+      - name: Get Proxmox's own validation error for nextcloud
+        if: always() && steps.env.outputs.DIR == 'core-infra'
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
+            root@192.168.0.253 \
+            "journalctl -u pvedaemon -u pveproxy --since '2026-08-03 06:38:30' --until '2026-08-03 06:39:00' --no-pager"
 
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
