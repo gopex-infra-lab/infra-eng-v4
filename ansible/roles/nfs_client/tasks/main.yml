@@ -40,6 +40,12 @@
     state: started
   loop: "{{ nfs_mounts }}"
 
+- name: Ensure docker.service.d directory exists
+  file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    mode: "0755"
+
 # Containers must never start against an empty mountpoint — data would land
 # on the local disk while the app believes it is on the NAS.
 - name: Ensure docker.service waits for the NFS mounts
