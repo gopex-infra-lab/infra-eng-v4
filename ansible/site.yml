@@ -59,9 +59,9 @@
   become: true
   tags: [nextcloud, never]
   vars:
-    nas_host: "{{ nas_host | default('192.168.0.50') }}"
-    nextcloud_nfs_export: "{{ nextcloud_nfs_export | default('/volume1/nextcloud-data') }}"
-    nextcloud_nfs_path: "{{ nextcloud_nfs_path | default('/mnt/nas/nextcloud') }}"
+    nas_host: "192.168.0.22"
+    nextcloud_nfs_export: "/volume1/homes"
+    nextcloud_nfs_path: "/mnt/nas/nextcloud"
   roles:
     - role: nfs_client
       tags: [nextcloud, never]
@@ -77,8 +77,8 @@
   tags: [immich, never]
   vars:
     nas_host: "192.168.0.22"
-    immich_nfs_export: "{{ immich_nfs_export | default('/volume1/immich-library') }}"
-    immich_nfs_path: "{{ immich_nfs_path | default('/mnt/nas/immich') }}"
+    immich_nfs_export: "/volume1/immich-library"
+    immich_nfs_path: "/mnt/nas/immich"
   roles:
     - role: nfs_client
       tags: [immich, never]
@@ -87,5 +87,4 @@
           - export: "{{ immich_nfs_export }}"
             path: "{{ immich_nfs_path }}"
     - role: immich
-      tags: [immich, never]
- 
+      tags: [immich, never] 
