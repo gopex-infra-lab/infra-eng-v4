@@ -160,6 +160,7 @@ jobs:
           (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         working-directory: ${{ steps.env.outputs.DIR }}
+        timeout-minutes: 10
         run: terraform apply -auto-approve tfplan
       
       - name: Terraform Destroy
