@@ -13,9 +13,6 @@ services:
       redis:
         condition: service_started
     ports:
-      # Bound to the VM's own interface for now — no reverse proxy deployed
-      # yet. LAN/VPN-only exposure is acceptable at this stage; revisit when
-      # Caddy is added in front of this.
       - "2283:2283"
     volumes:
       - ${UPLOAD_LOCATION}:/usr/src/app/upload
