@@ -35,10 +35,10 @@ resource "proxmox_vm_qemu" "core" {
   target_node = var.target_node
   clone       = var.template_name
 
-  cores  = var.cpu_cores
-  memory = var.memory_mb
-  hotplug = "network,disk,usb,cpu,memory"
-  numa    = 1
+  cores       = var.cpu_cores
+  memory      = var.memory_mb
+  hotplug     = "network,disk,usb,cpu,memory"
+  numa        = true
 
   network {
     model    = "virtio"
