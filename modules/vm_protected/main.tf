@@ -38,6 +38,7 @@ resource "proxmox_vm_qemu" "core" {
   cores  = var.cpu_cores
   memory = var.memory_mb
   hotplug = "network,disk,usb,cpu,memory"
+  numa    = 1
 
   network {
     model    = "virtio"
