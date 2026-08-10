@@ -49,6 +49,7 @@
   tags: [avelo, never]
   vars:
     avelo_image_tag: "{{ avelo_image_tag | default('latest') }}"
+    avelo_pg_password: "{{ avelo_pg_password | default('') }}"
     avelo_grafana_password: "{{ avelo_grafana_password | default('') }}"
   roles:
     - role: avelo_app
@@ -86,4 +87,4 @@
           - export: "{{ immich_nfs_export }}"
             path: "{{ immich_nfs_path }}"
     - role: immich
-      tags: [immich, never]
+      tags: [immich, never] 
