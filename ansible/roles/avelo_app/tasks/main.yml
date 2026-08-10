@@ -44,8 +44,8 @@
     url: "http://localhost:{{ avelo_grafana_port }}/api/health"
     status_code: 200
   register: grafana_health
-  retries: 12
-  delay: 5
+  retries: 10
+  delay: 10
   until: grafana_health.status == 200
 
 - name: Check if associate user exists
