@@ -1,0 +1,23 @@
+# Rendered by the avelo_app role, copied to {{ avelo_app_dir }}/prometheus.yml
+# (Phase 1, August 2026). Templated (not a static file) so the scrape
+# targets' ports always match docker-compose.yml.j2's
+# avelo_metrics_poller_port / avelo_metrics_inference_port — a static
+# file with hardcoded ports would silently drift out of sync if those
+# defaults ever changed.
+
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: "avelo-poller"
+    static_configs:
+      - targets: ["poller:{{ avelo_metrics_poller_port }}"]
+        labels:
+          service: poller
+
+  - job_name: "avelo-inference"
+    static_configs:
+      - targets: ["inference:{{ avelo_metrics_inference_port }}"]
+        labels:
+          service: inference
