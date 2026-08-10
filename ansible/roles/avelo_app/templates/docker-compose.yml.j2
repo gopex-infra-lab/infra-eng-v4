@@ -1,21 +1,19 @@
 # Rendered by the avelo_app role. Images are built+pushed by the app repo CI.
-# Schema is baked into the poller image; dashboards + Grafana provisioning
-# (including the Prometheus datasource and alert rules) into the grafana
-# image — so there are no host-side config files except this compose, .env,
-# and prometheus.yml (Phase 1, August 2026).
+# Schema is baked into the poller image; dashboards into the grafana image —
+# so there are no host-side config files, only this compose and .env.
 services:
   timescaledb:
     image: timescale/timescaledb:2.17.2-pg16
     environment:
-      POSTGRES_USER: {{ avelo_postgres_user }}
+      POSTGRES_USER: {{ avelo_pg_user }}
       POSTGRES_PASSWORD: ${PGPASSWORD}
-      POSTGRES_DB: {{ avelo_postgres_db }}
+      POSTGRES_DB: {{ avelo_pg_database }}
     volumes:
       - tsdb_data:/var/lib/postgresql/data
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U {{ avelo_postgres_user }}"]
+      test: ["CMD-SHELL", "pg_isready -U {{ avelo_pg_user }}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -26,25 +24,9 @@ services:
     depends_on:
       timescaledb: {condition: service_healthy}
     environment:
-      DATABASE_URL: postgresql://{{ avelo_postgres_user }}:${PGPASSWORD}@timescaledb:5432/{{ avelo_postgres_db }}
+      DATABASE_URL: postgresql://{{ avelo_pg_user }}:${PGPASSWORD}@timescaledb:5432/{{ avelo_pg_database }}
       APPLY_SCHEMA: "1"
       POLL_INTERVAL_SECONDS: "{{ avelo_poll_interval_seconds }}"
-      METRICS_PORT: "{{ avelo_metrics_poller_port }}"
-    expose: ["{{ avelo_metrics_poller_port }}"]
-    restart: unless-stopped
-
-  # Reuses the poller image — poller/Dockerfile in avelo-fleet-intelligence
-  # does a directory COPY of poller/, so disabled_tracker.py ships inside it
-  # already. Just a different entrypoint command, no separate image/build.
-  disabled_tracker:
-    image: {{ avelo_registry }}/avelo-poller:{{ avelo_image_tag }}
-    command: ["python", "disabled_tracker.py"]
-    depends_on:
-      timescaledb: {condition: service_healthy}
-    environment:
-      DATABASE_URL: postgresql://{{ avelo_postgres_user }}:${PGPASSWORD}@timescaledb:5432/{{ avelo_postgres_db }}
-      DISABLED_TRACKER_SYSTEMS: "avelo"
-      DISABLED_TRACKER_INTERVAL_SECONDS: "{{ avelo_disabled_tracker_interval_seconds }}"
     restart: unless-stopped
 
   inference:
@@ -52,40 +34,24 @@ services:
     depends_on:
       timescaledb: {condition: service_healthy}
     environment:
-      DATABASE_URL: postgresql://{{ avelo_postgres_user }}:${PGPASSWORD}@timescaledb:5432/{{ avelo_postgres_db }}
+      DATABASE_URL: postgresql://{{ avelo_pg_user }}:${PGPASSWORD}@timescaledb:5432/{{ avelo_pg_database }}
       INFER_INTERVAL_SECONDS: "{{ avelo_infer_interval_seconds }}"
       INFER_SYSTEMS: "{{ avelo_infer_systems }}"
-      METRICS_PORT: "{{ avelo_metrics_inference_port }}"
-    expose: ["{{ avelo_metrics_inference_port }}"]
-    restart: unless-stopped
-
-  # No host port published — nothing outside this compose network needs to
-  # query Prometheus directly; Grafana reaches it over the internal network
-  # via the datasource baked into the avelo-grafana image
-  # (uid: prometheus, url: http://prometheus:9090).
-  prometheus:
-    image: prom/prometheus:v2.53.0
-    volumes:
-      - "{{ avelo_app_dir }}/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
-      - prometheus_data:/prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.retention.time={{ avelo_prometheus_retention }}"
     restart: unless-stopped
 
   grafana:
     image: {{ avelo_registry }}/avelo-grafana:{{ avelo_image_tag }}
-    depends_on: [timescaledb, prometheus]
+    depends_on: [timescaledb]
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
-      PGUSER: {{ avelo_postgres_user }}
+      GF_PATHS_DATA: /var/lib/grafana-persist
+      PGUSER: {{ avelo_pg_user }}
       PGPASSWORD: ${PGPASSWORD}
-      PGDATABASE: {{ avelo_postgres_db }}
-    volumes: [grafana_data:/var/lib/grafana]
+      PGDATABASE: {{ avelo_pg_database }}
+    volumes: [grafana_data:/var/lib/grafana-persist]
     ports: ["{{ avelo_grafana_port }}:3000"]
     restart: unless-stopped
 
 volumes:
   tsdb_data:
   grafana_data:
-  prometheus_data:
