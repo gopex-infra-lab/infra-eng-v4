@@ -5,16 +5,31 @@ avelo_app_dir: /opt/avelo-fleet-intelligence
 avelo_registry: ghcr.io/gopex-infra-lab
 avelo_image_tag: latest                 # CI passes the git SHA via -e
 
-avelo_pg_user: fleet
-avelo_pg_database: fleet
+# STAGE 1 (August 2026) — renamed from avelo_pg_user / avelo_pg_database for
+# naming consistency with the workflow's AVELO_POSTGRES_USER/_DB variables.
+# The workflow's extra-vars are DELIBERATELY NOT consumed by this role yet —
+# site.yml does not forward them (see site.yml's comment). Confirmed directly
+# against the live database on 2026-08-10 (`\du` / `\l` in psql): the only
+# role and database that exist are both named "fleet". The GitHub Actions
+# variables AVELO_POSTGRES_USER=avelo / AVELO_POSTGRES_DB=avelodb do not
+# correspond to anything that has ever actually existed in production.
+# Wiring them straight through previously broke every application container's
+# database connection (see CHANGES.md's Phase 1 postmortem). If the database
+# itself is ever deliberately renamed (ALTER ROLE / ALTER DATABASE, done as
+# its own planned migration with connections drained first), update these
+# defaults to match ONLY after that migration is confirmed complete — never
+# before, and never by simply forwarding the workflow variables.
+avelo_postgres_user: fleet
+avelo_postgres_db: fleet
+ 
 avelo_grafana_port: 3000
-
+ 
 avelo_gbfs_url: "https://quebec.publicbikesystem.net/customer/gbfs/v3.0/gbfs.json"
-bixi_gbfs_url: "https://gbfs.velobixi.com/gbfs/gbfs.json"
 avelo_poll_interval_seconds: 60
 avelo_infer_interval_seconds: 600
 avelo_infer_systems: "avelo"
-
-# Secrets (avelo_pg_password, avelo_grafana_password) come from CI extra-vars.
-# Optional GHCR pull creds for PRIVATE packages (leave unset if public):
-# avelo_ghcr_user, avelo_ghcr_token
+ 
+# Secrets (avelo_postgres_password, avelo_grafana_password,
+# avelo_grafana_editor_user, avelo_grafana_editor_password) come from CI
+# extra-vars. Optional GHCR pull creds for PRIVATE packages (leave unset
+# if public): avelo_ghcr_user, avelo_ghcr_token
