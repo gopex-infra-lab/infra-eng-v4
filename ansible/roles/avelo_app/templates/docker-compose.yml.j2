@@ -27,6 +27,24 @@ services:
       APPLY_SCHEMA: "1"
       POLL_INTERVAL_SECONDS: "{{ avelo_poll_interval_seconds }}"
     restart: unless-stopped
+  # STAGE 4 (August 2026): reuses the poller image — poller/Dockerfile does
+  # a directory COPY of poller/, so disabled_tracker.py ships inside it
+  # already (confirmed directly: `docker run --rm --entrypoint ls
+  # avelo-poller:<sha> /app/disabled_tracker.py` lists the file). Just a
+  # different entrypoint command, no separate image/build/CI step.
+  # Depends on db/schema.sql's station_disabled_periods table, which
+  # poller's own APPLY_SCHEMA=1 startup step creates — confirmed present
+  # in production as of Stage 3, before this service was introduced.
+  disabled_tracker:
+    image: {{ avelo_registry }}/avelo-poller:{{ avelo_image_tag }}
+    command: ["python", "disabled_tracker.py"]
+    depends_on:
+      timescaledb: {condition: service_healthy}
+    environment:
+      DATABASE_URL: postgresql://{{ avelo_postgres_user }}:${PGPASSWORD}@timescaledb:5432/{{ avelo_postgres_db }}
+      DISABLED_TRACKER_SYSTEMS: "avelo"
+      DISABLED_TRACKER_INTERVAL_SECONDS: "60"
+    restart: unless-stopped
   inference:
     image: {{ avelo_registry }}/avelo-inference:{{ avelo_image_tag }}
     depends_on:
