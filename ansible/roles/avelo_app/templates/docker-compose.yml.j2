@@ -39,17 +39,24 @@ services:
   grafana:
     image: {{ avelo_registry }}/avelo-grafana:{{ avelo_image_tag }}
     depends_on: [timescaledb]
+    # STAGE 2 fix (August 2026): a fresh named volume mounted at a path
+    # never referenced by the base image's own setup (unlike the default
+    # /var/lib/grafana, which the image's entrypoint chowns to the grafana
+    # user at container start) is owned by root when Docker creates it.
+    # Grafana's container runs as a non-root user by default and cannot
+    # write to a root-owned path — confirmed directly: "permission denied"
+    # creating grafana.db under /var/lib/grafana-persist on first deploy of
+    # this stage. Running as root (uid 0) for this container sidesteps
+    # that ownership mismatch entirely. This is the documented workaround
+    # for custom Grafana data paths (see Grafana's own Docker install docs,
+    # "file permissions" section) — an alternative fixed-uid approach
+    # (matching the image's built-in grafana user, typically uid 472)
+    # was considered and rejected here because that uid isn't guaranteed
+    # stable across Grafana image versions, whereas root always has
+    # write access regardless.
+    user: "0"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
-      # STAGE 2 (August 2026): dashboards are baked into the image at
-      # /var/lib/grafana/dashboards. Mounting a persisted volume AT
-      # /var/lib/grafana (as a future stage might be tempted to do, to
-      # survive container recreation) would shadow that baked-in directory
-      # with whatever's already in the volume — this exact mistake already
-      # broke production twice this session. GF_PATHS_DATA redirects
-      # Grafana's actual state (its sqlite DB — users, alert history) to a
-      # sibling path instead, so the dashboards directory is never at risk
-      # of being shadowed by anything mounted for persistence.
       GF_PATHS_DATA: /var/lib/grafana-persist
       PGUSER: {{ avelo_postgres_user }}
       PGPASSWORD: ${PGPASSWORD}
