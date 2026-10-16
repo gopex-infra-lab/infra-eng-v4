@@ -62,7 +62,6 @@
       MYSQL_DATABASE={{ nextcloud_db_name }}
       MYSQL_USER={{ nextcloud_db_user }}
       MYSQL_PASSWORD={{ nextcloud_db_password }}
-      MYSQL_HOST=db
       REDIS_HOST=redis
       NEXTCLOUD_TRUSTED_DOMAINS={{ nextcloud_trusted_domains }}
       PHP_MEMORY_LIMIT={{ nextcloud_php_memory_limit }}
