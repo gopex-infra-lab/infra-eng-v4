@@ -33,6 +33,11 @@ on:
         description: "ansible tags to run (blank = current behavior)"
         required: false
         default: ""
+      
+      ansible_limit:
+        description: "limit to host(s), e.g. core-nextcloud (blank = all)"
+        required: false
+        default: ""
 
 concurrency:
   group: terraform-${{ github.ref }}
@@ -219,6 +224,7 @@ jobs:
             -i ${{ steps.env.outputs.INV }} \
             --private-key ~/.ssh/id_ed25519_infra \
             ${{ github.event.inputs.ansible_tags != '' && format('--tags {0}', github.event.inputs.ansible_tags) || '' }} \
+            ${{ github.event.inputs.ansible_limit != '' && format('--limit {0}', github.event.inputs.ansible_limit) || '' }} \
             -e env=${{ github.event.inputs.environment }} \
             -e fastapi_postgres_db=$FASTAPI_POSTGRES_DB \
             -e fastapi_postgres_user=$FASTAPI_POSTGRES_USER \
