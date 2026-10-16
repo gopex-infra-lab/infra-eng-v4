@@ -25,6 +25,14 @@
   command: "findmnt -t nfs4 --target {{ nfs_mounts[0].path }}"
   changed_when: false
 
+- name: Ensure Nextcloud data directory marker and ownership
+  copy:
+    dest: "{{ nfs_mounts[0].path }}/.ncdata"
+    content: "# Nextcloud data directory\n# Do not change this file\n"
+    owner: "33"
+    group: "33"
+    mode: "0644"
+
 - name: Ensure runtime directory exists
   file:
     path: /opt/app
@@ -39,7 +47,6 @@
     owner: "{{ item.owner | default(app_user) }}"
     mode: "{{ item.mode | default('0750') }}"
   loop:
-    - { path: /opt/app/db }
     - { path: /opt/app/config, owner: "33" }   # www-data uid in the container
     - { path: /opt/app/logs, owner: "33" }
 
@@ -83,7 +90,7 @@
   become: true
   become_user: "{{ app_user }}"
   git:
-    repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v4.git"   # CONFIRM: matches the remote used by the other roles; update here (and there) if the rename to infra-eng-v4 has since changed it
+    repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v4.git"
     dest: "{{ nextcloud_repo_dest }}"
     version: dev
     accept_hostkey: yes
@@ -138,10 +145,11 @@
         'dbtype' => 'mysql',
         'dbname' => '{{ nextcloud_db_name }}',
         'dbhost' => 'db',
-        'dbtableprefix' => 'oc_',
+        'dbtableprefix' => '{{ nextcloud_db_prefix }}',
         'dbuser' => '{{ nextcloud_db_user }}',
         'dbpassword' => '{{ nextcloud_db_password }}',
         'mysql.utf8mb4' => true,
+        'version' => '{{ nextcloud_old_version }}',
 
         'memcache.local' => '\OC\Memcache\APCu',
         'memcache.distributed' => '\OC\Memcache\Redis',
@@ -221,6 +229,25 @@
   retries: 30
   delay: 10
   until: nc_status.status == 200
+
+- name: Run upgrade if the code/DB versions differ
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: php occ upgrade
+  register: nc_upgrade
+  changed_when: "'already latest' not in (nc_upgrade.stdout ~ nc_upgrade.stderr)"
+  failed_when: nc_upgrade.rc != 0
+
+- name: Install third-party apps (code is not in the image)
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: "php occ app:install {{ item }}"
+  loop: "{{ nextcloud_apps_to_install }}"
+  register: app_install
+  changed_when: app_install.rc == 0
+  failed_when: app_install.rc != 0 and 'already installed' not in (app_install.stdout ~ app_install.stderr)
 
 - name: Leave maintenance mode
   community.docker.docker_container_exec:

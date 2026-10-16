@@ -55,7 +55,7 @@
   become: true
   become_user: "{{ app_user }}"
   git:
-    repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v4.git"   # CONFIRM: see note in the nextcloud role
+    repo: "git@github.com:gopex-infra-lab/infra-eng-lab-v4.git"
     dest: "{{ immich_repo_dest }}"
     version: dev
     accept_hostkey: yes
