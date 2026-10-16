@@ -93,6 +93,13 @@ jobs:
       - name: Shred the local dump
         if: always()
         run: shred -u nextcloud.sql || rm -f nextcloud.sql
+      
+      - name: Take the OLD instance out of maintenance mode if anything failed
+        if: failure()
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_old_nextcloud \
+            "${{ secrets.OLD_NEXTCLOUD_SSH_USER }}@${{ secrets.OLD_NEXTCLOUD_HOST }}" \
+            "${{ secrets.OLD_NEXTCLOUD_OCC_CMD }} maintenance:mode --off"
   
   deploy:
     if: |
