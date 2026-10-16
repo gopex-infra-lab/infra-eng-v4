@@ -81,20 +81,12 @@ jobs:
             > nextcloud.sql
           test -s nextcloud.sql
 
-      - name: rsync the OLD data directory onto the NAS
-        run: |
-          rsync -az --delete -e "ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_old_nextcloud" \
-            "${{ secrets.OLD_NEXTCLOUD_SSH_USER }}@${{ secrets.OLD_NEXTCLOUD_HOST }}:${{ secrets.OLD_NEXTCLOUD_DATA_PATH }}/" \
-            /mnt/pve/nas/nextcloud-data/
-          # CONFIRM the runner can reach this NAS path directly; if not,
-          # route via core-nextcloud instead.
-
       - name: Import the dump into the NEW database container
         run: |
           scp -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            nextcloud.sql "${{ secrets.TF_VAR_ANSIBLE_USER }}@192.168.0.190:/tmp/nextcloud.sql"
+            nextcloud.sql "${{ secrets.TF_VAR_ANSIBLE_USER }}@192.168.0.249:/tmp/nextcloud.sql"
           ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519_infra \
-            "${{ secrets.TF_VAR_ANSIBLE_USER }}@192.168.0.190" \
+            "${{ secrets.TF_VAR_ANSIBLE_USER }}@192.168.0.249" \
             "docker exec -i nextcloud-db mariadb -u root -p'${{ secrets.NEXTCLOUD_DB_ROOT_PASSWORD }}' \
              ${{ secrets.OLD_NEXTCLOUD_DB_NAME }} < /tmp/nextcloud.sql && rm /tmp/nextcloud.sql"
 

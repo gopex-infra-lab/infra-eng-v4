@@ -10,7 +10,7 @@ services:
       MARIADB_PASSWORD: ${MARIADB_PASSWORD}
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
     volumes:
-      - ./db:/var/lib/mysql
+      - nextcloud_dbdata:/var/lib/mysql
       - ./mariadb-nextcloud.cnf:/etc/mysql/conf.d/nextcloud.cnf:ro
     networks:
       - nextcloud_net
@@ -43,9 +43,9 @@ services:
       redis:
         condition: service_started
     ports:
-      # Loopback only — no LAN exposure, no WAN forward. Reached over the
-      # existing OpenVPN tunnel via the reverse proxy on this host.
-      - "127.0.0.1:${NEXTCLOUD_HTTP_PORT}:80"
+      # All interfaces, not loopback-only: no reverse proxy exists yet.
+      # No WAN forward; reachable only over LAN or the OpenVPN tunnel.
+      - "${NEXTCLOUD_HTTP_PORT}:80"
     volumes:
       - nextcloud_html:/var/www/html
       - /mnt/nas/nextcloud:/var/www/html/data
@@ -69,3 +69,4 @@ networks:
 volumes:
   nextcloud_html:
     name: nextcloud_html_data
+  nextcloud_dbdata:
