@@ -1,5 +1,6 @@
 - hosts: all
   gather_facts: false
+  tags: [always]
   tasks:
     - name: Wait for SSH port
       wait_for:
@@ -20,6 +21,7 @@
 
 - hosts: all
   become: true
+  tags: [always]
   roles:
     - bootstrap
     - ssh_setup
