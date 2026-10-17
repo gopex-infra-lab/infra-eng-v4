@@ -306,6 +306,18 @@
   changed_when: false
   failed_when: false
 
+- name: Install cron (not present in the cloud image)
+  apt:
+    name: cron
+    state: present
+    lock_timeout: 300
+
+- name: Ensure cron is running
+  systemd:
+    name: cron
+    state: started
+    enabled: true
+
 - name: Host cron for Nextcloud background jobs
   cron:
     name: nextcloud-cron
