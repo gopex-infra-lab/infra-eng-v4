@@ -69,6 +69,8 @@
       NEXTCLOUD_HTTP_PORT={{ nextcloud_http_port }}
       NEXTCLOUD_MARIADB_IMAGE={{ nextcloud_mariadb_image }}
       NEXTCLOUD_REDIS_IMAGE={{ nextcloud_redis_image }}
+      NEXTCLOUD_HOSTNAME={{ nextcloud_hostname }}
+      NEXTCLOUD_CADDY_IMAGE={{ nextcloud_caddy_image }}
       NEXTCLOUD_APP_IMAGE={{ nextcloud_app_image }}
     # NEXTCLOUD_ADMIN_USER / NEXTCLOUD_ADMIN_PASSWORD deliberately absent:
     # setting them triggers the install wizard, which mints a NEW secret and
@@ -111,6 +113,12 @@
   copy:
     src: "{{ nextcloud_repo_dest }}/docker/nextcloud/zz-nextcloud.ini"
     dest: /opt/app/zz-nextcloud.ini
+    remote_src: yes
+
+- name: Copy Caddyfile
+  copy:
+    src: "{{ nextcloud_repo_dest }}/docker/nextcloud/Caddyfile"
+    dest: /opt/app/Caddyfile
     remote_src: yes
 
 # Rendered directly (not copied from the repo) because it embeds secrets,
@@ -299,6 +307,24 @@
     - { key: overwritehost, value: "{{ nextcloud_overwrite_host }}" }
     - { key: overwriteprotocol, value: "{{ nextcloud_overwrite_protocol }}" }
     - { key: "trusted_proxies 0", value: "172.16.0.0/12" }
+  changed_when: false
+
+- name: Apply trusted domains
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: "php occ config:system:set trusted_domains {{ idx }} --value {{ d }}"
+  loop: "{{ nextcloud_trusted_domains.split() }}"
+  loop_control:
+    index_var: idx
+    loop_var: d
+  changed_when: false
+
+- name: Set CLI URL
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: "php occ config:system:set overwrite.cli.url --value https://{{ nextcloud_hostname }}"
   changed_when: false
 
 - name: Background jobs via cron

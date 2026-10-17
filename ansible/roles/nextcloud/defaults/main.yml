@@ -18,9 +18,11 @@ nextcloud_old_version: "31.0.8.1"
 
 # First verification over plain HTTP on the VM IP. Switch to the final
 # hostname and https after Caddy exists.
-nextcloud_overwrite_host: "192.168.0.249:8080"
-nextcloud_overwrite_protocol: "http"
-nextcloud_trusted_domains: "192.168.0.249 192.168.0.249:8080"
+nextcloud_hostname: "vault.home.arpa"
+nextcloud_caddy_image: "caddy:2.10.2-alpine"
+nextcloud_overwrite_host: "{{ nextcloud_hostname }}"
+nextcloud_overwrite_protocol: "https"
+nextcloud_trusted_domains: "{{ nextcloud_hostname }} 192.168.0.249 192.168.0.249:8080"
 
 # Third-party apps whose code is not in the image. The database marks them
 # enabled, so they must be installed. Passwords holds the vault.

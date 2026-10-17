@@ -1,0 +1,7 @@
+{$NEXTCLOUD_HOSTNAME} {
+	tls internal
+	encode zstd gzip
+	redir /.well-known/carddav /remote.php/dav/ 301
+	redir /.well-known/caldav /remote.php/dav/ 301
+	reverse_proxy app:80
+}
