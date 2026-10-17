@@ -61,6 +61,26 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+  
+  caddy:
+    image: ${NEXTCLOUD_CADDY_IMAGE}
+    container_name: nextcloud-caddy
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      NEXTCLOUD_HOSTNAME: ${NEXTCLOUD_HOSTNAME}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - nextcloud_net
+    security_opt:
+      - no-new-privileges:true
 
 networks:
   nextcloud_net:
@@ -70,3 +90,5 @@ volumes:
   nextcloud_html:
     name: nextcloud_html_data
   nextcloud_dbdata:
+  caddy_data:
+  caddy_config:
