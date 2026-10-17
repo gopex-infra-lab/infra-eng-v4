@@ -28,6 +28,11 @@ nextcloud_trusted_domains: "{{ nextcloud_hostname }} 192.168.0.249 192.168.0.249
 # enabled, so they must be installed. Passwords holds the vault.
 nextcloud_apps_to_install: [passwords]
 
+nextcloud_apps_to_disable:
+  - dashboard
+  - photos
+  - activity
+
 # true = restoring the existing MariaDB dump. The install wizard must never
 # run in this mode — see the guard tasks below.
 nextcloud_migration_mode: true

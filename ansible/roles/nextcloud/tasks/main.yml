@@ -297,6 +297,16 @@
     command: php occ maintenance:mode --off
   changed_when: false
 
+- name: Disable apps not used on this instance
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: "php occ app:disable {{ item }}"
+  loop: "{{ nextcloud_apps_to_disable }}"
+  register: app_disable
+  changed_when: "'disabled' in app_disable.stdout and 'No such app' not in app_disable.stdout"
+  failed_when: false
+
 - name: Apply system config
   community.docker.docker_container_exec:
     container: nextcloud-app
@@ -307,6 +317,7 @@
     - { key: overwritehost, value: "{{ nextcloud_overwrite_host }}" }
     - { key: overwriteprotocol, value: "{{ nextcloud_overwrite_protocol }}" }
     - { key: "trusted_proxies 0", value: "172.16.0.0/12" }
+    - { key: defaultapp, value: "files" }
   changed_when: false
 
 - name: Apply trusted domains
