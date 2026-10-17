@@ -238,15 +238,49 @@
   changed_when: "'already latest' not in (nc_upgrade.stdout ~ nc_upgrade.stderr)"
   failed_when: nc_upgrade.rc != 0
 
-- name: Install third-party apps (code is not in the image)
+- name: Check whether third-party app code is present
   community.docker.docker_container_exec:
     container: nextcloud-app
     user: www-data
-    command: "php occ app:install {{ item }}"
+    command: "php occ app:getpath {{ item }}"
   loop: "{{ nextcloud_apps_to_install }}"
+  register: app_path
+  changed_when: false
+  failed_when: false
+
+- name: Drop the stale 'enabled' flag for apps whose code is missing (imported DB claims installed)
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: "php occ config:app:delete {{ item.item }} enabled"
+  loop: "{{ app_path.results }}"
+  when: (item.stdout | default('') | trim) == ''
+  changed_when: true
+
+- name: Install third-party apps whose code is missing
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: "php occ app:install {{ item.item }}"
+  loop: "{{ app_path.results }}"
+  when: (item.stdout | default('') | trim) == ''
   register: app_install
   changed_when: app_install.rc == 0
-  failed_when: app_install.rc != 0 and 'already installed' not in (app_install.stdout ~ app_install.stderr)
+
+- name: Verify third-party apps are installed and enabled
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: php occ app:list --output=json
+  register: app_list
+  changed_when: false
+
+- name: Fail if a required app is not enabled
+  assert:
+    that:
+      - item in (app_list.stdout | from_json).enabled
+    fail_msg: "App '{{ item }}' is not enabled after install. Check 'occ app:list' on the VM."
+  loop: "{{ nextcloud_apps_to_install }}"
 
 - name: Leave maintenance mode
   community.docker.docker_container_exec:
