@@ -25,6 +25,22 @@
   command: "findmnt -t nfs4 --target {{ nfs_mounts[0].path }}"
   changed_when: false
 
+- name: Assert the NAS backup mount is present before deploying
+  command: "findmnt -t nfs4 --target {{ nextcloud_backup_mount }}"
+  changed_when: false
+
+- name: Install cron (not present in the cloud image)
+  apt:
+    name: cron
+    state: present
+    lock_timeout: 300
+
+- name: Ensure cron is running
+  systemd:
+    name: cron
+    state: started
+    enabled: true
+
 - name: Ensure Nextcloud data directory marker and ownership
   copy:
     dest: "{{ nfs_mounts[0].path }}/.ncdata"
@@ -345,6 +361,30 @@
     command: php occ background:cron
   changed_when: false
 
+- name: Ensure the backup directory exists
+  file:
+    path: "{{ nextcloud_backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Install the DB backup script
+  template:
+    src: nextcloud-db-backup.sh.j2
+    dest: /usr/local/bin/nextcloud-db-backup.sh
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Schedule the daily DB backup
+  cron:
+    name: "nextcloud db backup"
+    hour: "2"
+    minute: "30"
+    user: root
+    job: "/usr/local/bin/nextcloud-db-backup.sh >> /var/log/nextcloud-db-backup.log 2>&1"
+
 - name: Enable brute-force protection and TOTP apps
   community.docker.docker_container_exec:
     container: nextcloud-app
@@ -364,9 +404,20 @@
   loop:
     - "maintenance:repair --include-expensive"
     - "db:add-missing-indices"
-    - "files:scan --all"
   changed_when: false
   when: nextcloud_migration_mode | bool
+
+# Full-library scan is slow on a large library. Run it only for a restore:
+# pass nextcloud_rescan_on_run=true as an extra-var.
+- name: Rescan all files (restore only)
+  community.docker.docker_container_exec:
+    container: nextcloud-app
+    user: www-data
+    command: "php occ files:scan --all"
+  changed_when: false
+  when:
+    - nextcloud_migration_mode | bool
+    - nextcloud_rescan_on_run | bool
 
 - name: Apply per-user quotas
   community.docker.docker_container_exec:
@@ -376,18 +427,6 @@
   loop: "{{ nextcloud_users_quota }}"
   changed_when: false
   failed_when: false
-
-- name: Install cron (not present in the cloud image)
-  apt:
-    name: cron
-    state: present
-    lock_timeout: 300
-
-- name: Ensure cron is running
-  systemd:
-    name: cron
-    state: started
-    enabled: true
 
 - name: Host cron for Nextcloud background jobs
   cron:

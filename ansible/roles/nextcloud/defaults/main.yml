@@ -5,7 +5,7 @@
 nextcloud_repo_dest: /opt/src/infra-eng-lab
 nextcloud_mariadb_image: "mariadb:11.4"   # old host runs 10.5.27; check the supported range for your Nextcloud major
 nextcloud_redis_image: "redis:7-alpine"
-nextcloud_app_image: "nextcloud:31.0.8-apache"   # FILL: major from `occ status`
+nextcloud_app_image: "nextcloud:31.0.8-apache"
 
 nextcloud_http_port: 8080
 nextcloud_php_memory_limit: "1G"
@@ -16,8 +16,15 @@ nextcloud_db_user: nextcloud
 nextcloud_db_prefix: "oc_"
 nextcloud_old_version: "31.0.8.1"
 
-# First verification over plain HTTP on the VM IP. Switch to the final
-# hostname and https after Caddy exists.
+# Daily DB dump to the NAS (script installed by this role).
+nextcloud_backup_mount: /mnt/nas/backups
+nextcloud_backup_dir: /mnt/nas/backups/nextcloud
+nextcloud_backup_keep: 30
+nextcloud_db_container: nextcloud-db
+nextcloud_db_user_var: MARIADB_USER
+nextcloud_db_password_var: MARIADB_PASSWORD
+
+# Public name served by Caddy (internal CA) and the URL settings derived from it.
 nextcloud_hostname: "vault.home.arpa"
 nextcloud_caddy_image: "caddy:2.10.2-alpine"
 nextcloud_overwrite_host: "{{ nextcloud_hostname }}"
@@ -34,8 +41,13 @@ nextcloud_apps_to_disable:
   - activity
 
 # true = restoring the existing MariaDB dump. The install wizard must never
-# run in this mode — see the guard tasks below.
+# run in this mode — see the guard tasks in tasks/main.yml. Keep true: a
+# rebuild-and-restore needs it to render config.php.
 nextcloud_migration_mode: true
+
+# true = run a full `occ files:scan --all` (slow on a large library).
+# Leave false; pass nextcloud_rescan_on_run=true as an extra-var for a restore.
+nextcloud_rescan_on_run: false
 
 nextcloud_users_quota: []
 # e.g.
@@ -43,6 +55,9 @@ nextcloud_users_quota: []
 #   - { user: "user1", quota: "1000 GB" }
 
 # Must match the nextcloud_nfs_export / nextcloud_nfs_path values in site.yml.
+# If site.yml sets nfs_mounts for the nfs_client role, add the second entry there too.
 nfs_mounts:
   - export: /volume1/nextcloud-data
     path: /mnt/nas/nextcloud
+  - export: /volume1/app-backups
+    path: /mnt/nas/backups
