@@ -22,7 +22,7 @@ nextcloud_hostname: "vault.home.arpa"
 nextcloud_caddy_image: "caddy:2.10.2-alpine"
 nextcloud_overwrite_host: "{{ nextcloud_hostname }}"
 nextcloud_overwrite_protocol: "https"
-nextcloud_trusted_domains: "{{ nextcloud_hostname }} 192.168.0.249 192.168.0.249:8080"
+nextcloud_trusted_domains: "{{ nextcloud_hostname }} 192.168.0.249"
 
 # Third-party apps whose code is not in the image. The database marks them
 # enabled, so they must be installed. Passwords holds the vault.
