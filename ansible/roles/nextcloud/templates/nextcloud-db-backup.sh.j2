@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Managed by Ansible (role: nextcloud). Do not edit on the host.
+# Daily dump of the Nextcloud database to the NAS, with retention.
+set -euo pipefail
+
+DEST="{{ nextcloud_backup_dir }}"
+MOUNT="{{ nextcloud_backup_mount }}"
+KEEP={{ nextcloud_backup_keep }}
+CONTAINER="{{ nextcloud_db_container }}"
+DB="{{ nextcloud_db_name }}"
+MIN_BYTES=10000
+
+STAMP="$(date +%Y%m%dT%H%M%S)"
+OUT="$DEST/nextcloud-db-$STAMP.sql.gz"
+TMP="$OUT.partial"
+
+log() { echo "$(date '+%F %T') $*"; }
+
+# Never run two backups at once.
+exec 9>/var/lock/nextcloud-db-backup.lock
+flock -n 9 || { log "another backup is running, exiting"; exit 0; }
+
+# Remove the partial file on any failure.
+trap 'rm -f "$TMP"' EXIT
+
+# The share must be mounted, otherwise the dump would land on the VM disk.
+mountpoint -q "$MOUNT" || { log "ERROR: $MOUNT is not mounted"; exit 1; }
+mkdir -p "$DEST"
+
+# The container must be running.
+[ "$(docker inspect -f '{{ '{{.State.Running}}' }}' "$CONTAINER" 2>/dev/null)" = "true" ] \
+  || { log "ERROR: container $CONTAINER is not running"; exit 1; }
+
+# Credentials are read inside the container; nothing secret is stored on the host.
+docker exec "$CONTAINER" sh -c \
+  'exec mariadb-dump -u"${{ nextcloud_db_user_var }}" -p"${{ nextcloud_db_password_var }}" --single-transaction --routines --triggers '"$DB" \
+  | gzip > "$TMP"
+
+# Verify before publishing.
+gzip -t "$TMP"
+SIZE="$(stat -c %s "$TMP")"
+[ "$SIZE" -gt "$MIN_BYTES" ] || { log "ERROR: dump too small ($SIZE bytes)"; exit 1; }
+zcat "$TMP" | tail -n 5 | grep -q "Dump completed" \
+  || { log "ERROR: dump has no completion marker"; exit 1; }
+
+mv "$TMP" "$OUT"
+trap - EXIT
+log "OK: $OUT ($SIZE bytes)"
+
+# Retention: keep the newest $KEEP dumps (files, not directories).
+ls -1t "$DEST"/nextcloud-db-*.sql.gz 2>/dev/null | tail -n +"$((KEEP + 1))" | xargs -r rm --
