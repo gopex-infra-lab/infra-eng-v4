@@ -1,5 +1,5 @@
 # Based on the official Immich compose, adapted to house conventions: pinned
-# release, bind mounts, loopback-only port. Server and mobile app versions
+# release, bind mounts, LAN-published port 2283. Server and mobile app versions
 # must stay in step — bump ${IMMICH_VERSION} deliberately, never "latest".
 services:
   immich-server:
@@ -59,7 +59,7 @@ services:
       POSTGRES_DB: ${DB_DATABASE_NAME}
       POSTGRES_INITDB_ARGS: "--data-checksums"
     volumes:
-      - immich_pgdata:/var/lib/postgresql/data
+      - /opt/app/postgres:/var/lib/postgresql/data
     networks:
       - immich_net
     security_opt:
@@ -73,6 +73,3 @@ services:
 networks:
   immich_net:
     driver: bridge
-
-volumes:
-  immich_pgdata:
