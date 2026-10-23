@@ -15,6 +15,9 @@ nextcloud_db_name: nextcloud
 nextcloud_db_user: nextcloud
 nextcloud_db_prefix: "oc_"
 nextcloud_old_version: "31.0.8.1"
+nextcloud_nas_enabled: true
+nextcloud_backup_enabled: true
+nextcloud_host_cron_enabled: true
 
 # Daily DB dump to the NAS (script installed by this role).
 nextcloud_backup_mount: /mnt/nas/backups
