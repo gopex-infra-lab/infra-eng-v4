@@ -103,7 +103,7 @@
     nextcloud_nas_enabled: false
     nextcloud_backup_enabled: false
     nextcloud_host_cron_enabled: false
-    nextcloud_app_image: "nextcloud:33.0.10-apache"
+    nextcloud_app_image: "nextcloud:34.0.5-apache"
     #nextcloud_hostname: "192.168.0.244"
     #nextcloud_overwrite_host: "192.168.0.244"
     #nextcloud_overwrite_protocol: "https"
