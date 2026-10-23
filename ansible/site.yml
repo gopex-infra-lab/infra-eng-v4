@@ -97,6 +97,7 @@
 
 - name: Nextcloud rehearsal (throwaway VM, no NAS)
   hosts: nextcloud_test
+  become: true
   tags: [nextcloud_test, never]
   vars:
     nextcloud_nas_enabled: false
