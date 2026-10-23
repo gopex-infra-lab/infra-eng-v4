@@ -95,6 +95,7 @@
     - role: immich
       tags: [immich, never] 
 
+# This is a throwaway VM for testing Nextcloud upgrades and restores. It does not use the NAS, so it is not a full test of the production setup.
 - name: Nextcloud rehearsal (throwaway VM, no NAS)
   hosts: nextcloud_test
   become: true
@@ -103,7 +104,6 @@
     nextcloud_nas_enabled: false
     nextcloud_backup_enabled: false
     nextcloud_host_cron_enabled: false
-    nextcloud_app_image: "nextcloud:35.0.2-apache"
     #nextcloud_hostname: "192.168.0.244"
     #nextcloud_overwrite_host: "192.168.0.244"
     #nextcloud_overwrite_protocol: "https"
