@@ -103,9 +103,9 @@
     nextcloud_nas_enabled: false
     nextcloud_backup_enabled: false
     nextcloud_host_cron_enabled: false
-    nextcloud_hostname: "192.168.0.244"
-    nextcloud_overwrite_host: "192.168.0.244"
-    nextcloud_overwrite_protocol: "https"
-    nextcloud_trusted_domains: "192.168.0.244"
+    #nextcloud_hostname: "192.168.0.244"
+    #nextcloud_overwrite_host: "192.168.0.244"
+    #nextcloud_overwrite_protocol: "https"
+    #nextcloud_trusted_domains: "192.168.0.244"
   roles:
     - nextcloud
