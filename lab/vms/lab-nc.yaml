@@ -1,5 +1,5 @@
 vm_name: lab-nc
-memory_mb: 2048
+memory_mb: 4096
 cpu_cores: 2
 disk_size_gb: 30
 target_node: pve2
