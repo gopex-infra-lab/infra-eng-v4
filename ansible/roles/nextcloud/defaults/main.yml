@@ -5,7 +5,7 @@
 nextcloud_repo_dest: /opt/src/infra-eng-lab
 nextcloud_mariadb_image: "mariadb:11.4"   # old host runs 10.5.27; check the supported range for your Nextcloud major
 nextcloud_redis_image: "redis:7-alpine"
-nextcloud_app_image: "nextcloud:33.0.10-apache"
+nextcloud_app_image: "nextcloud:34.0.5-apache"
 
 nextcloud_http_port: 8080
 nextcloud_php_memory_limit: "1G"
