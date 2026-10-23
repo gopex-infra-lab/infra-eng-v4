@@ -381,6 +381,7 @@
     owner: root
     group: root
     mode: "0750"
+  when: nextcloud_backup_enabled | bool
 
 - name: Install the DB backup script
   template:
@@ -389,6 +390,7 @@
     owner: root
     group: root
     mode: "0750"
+  when: nextcloud_backup_enabled | bool
 
 - name: Schedule the daily DB backup
   cron:
@@ -397,6 +399,7 @@
     minute: "30"
     user: root
     job: "/usr/local/bin/nextcloud-db-backup.sh >> /var/log/nextcloud-db-backup.log 2>&1"
+  when: nextcloud_backup_enabled | bool
 
 - name: Enable brute-force protection and TOTP apps
   community.docker.docker_container_exec:
@@ -446,3 +449,4 @@
     name: nextcloud-cron
     minute: "*/5"
     job: "/usr/bin/docker exec -u www-data nextcloud-app php -f /var/www/html/cron.php"
+  when: nextcloud_host_cron_enabled | bool
