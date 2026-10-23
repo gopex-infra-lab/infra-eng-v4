@@ -24,10 +24,23 @@
 - name: Assert the NAS data mount is present before deploying
   command: "findmnt -t nfs4 --target {{ nfs_mounts[0].path }}"
   changed_when: false
+  when: nextcloud_nas_enabled | bool
 
 - name: Assert the NAS backup mount is present before deploying
   command: "findmnt -t nfs4 --target {{ nextcloud_backup_mount }}"
   changed_when: false
+  when:
+    - nextcloud_nas_enabled | bool
+    - nextcloud_backup_enabled | bool
+
+- name: Create a local data directory when there is no NAS (rehearsal VM)
+  file:
+    path: "{{ nfs_mounts[0].path }}"
+    state: directory
+    owner: "33"
+    group: "33"
+    mode: "0750"
+  when: not (nextcloud_nas_enabled | bool)
 
 - name: Install cron (not present in the cloud image)
   apt:
