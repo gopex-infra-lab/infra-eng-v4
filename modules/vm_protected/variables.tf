@@ -74,3 +74,8 @@ variable "infra_private_key" {
   type        = string
   sensitive   = true
 }
+
+variable "onboot" {
+  type    = bool
+  default = false
+}
