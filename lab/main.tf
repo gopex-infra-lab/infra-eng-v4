@@ -10,6 +10,7 @@ module "lab_vm" {
   cpu_cores = each.value.cpu_cores
   memory_mb = each.value.memory_mb
   ipconfig0 = each.value.ipconfig0
+  onboot    = try(each.value.onboot, false)
 
   template_name = each.value.template_name
   full_clone    = each.value.full_clone

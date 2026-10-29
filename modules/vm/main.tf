@@ -37,6 +37,7 @@ resource "proxmox_vm_qemu" "lab_vm" {
 
   cores  = var.cpu_cores
   memory = var.memory_mb
+  onboot = var.onboot
   network {
     model    = "virtio"
     bridge   = "vmbr0"
