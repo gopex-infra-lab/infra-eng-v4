@@ -1,0 +1,56 @@
+name: Plan only (self-hosted, no Ansible)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "directory to plan"
+        required: true
+        default: "core-infra"
+        type: choice
+        options:
+          - core-infra
+          - lab
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-state-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 20
+    env:
+      TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+      TF_VAR_pm_api_token_id: ${{ secrets.PM_API_TOKEN_ID }}
+      TF_VAR_pm_api_token_secret: ${{ secrets.PM_API_TOKEN_SECRET }}
+      TF_VAR_infra_public_key: ${{ secrets.INFRA_PUBLIC_KEY }}
+      TF_VAR_infra_private_key: ${{ secrets.INFRA_PRIVATE_KEY }}
+      TF_VAR_ansible_user: ${{ secrets.TF_VAR_ANSIBLE_USER }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: ${{ github.event.inputs.environment }}
+        run: terraform init -input=false
+
+      - name: Terraform plan (read-only)
+        working-directory: ${{ github.event.inputs.environment }}
+        run: terraform plan -input=false -lock-timeout=60s -out=tfplan
+
+      - name: Fail if the plan deletes or replaces a Proxmox resource
+        working-directory: ${{ github.event.inputs.environment }}
+        run: |
+          terraform show -json tfplan | python3 -c 'import json,sys; p=json.load(sys.stdin); bad=[(c["address"],c["change"]["actions"]) for c in p.get("resource_changes",[]) if c["type"].startswith("proxmox_") and "delete" in c["change"]["actions"]]; print("BLOCKED", bad) if bad else print("ok: no delete or replace on proxmox resources"); sys.exit(1 if bad else 0)'
+
+      - name: Remove the plan file
+        if: always()
+        working-directory: ${{ github.event.inputs.environment }}
+        run: rm -f tfplan

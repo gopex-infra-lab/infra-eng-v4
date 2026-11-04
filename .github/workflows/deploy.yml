@@ -21,7 +21,7 @@ on:
       action:
         description: "terraform action"
         required: true
-        default: "apply"
+        default: "plan"
         type: choice
         options:
           - apply
@@ -97,7 +97,7 @@ jobs:
 
       - name: Shred the local dump
         if: always()
-        run: shred -u nextcloud.sql || rm -f nextcloud.sql
+        run: shred -u nextcloud.sql ~/.ssh/id_ed25519_infra ~/.ssh/id_old_nextcloud || rm -f nextcloud.sql ~/.ssh/id_ed25519_infra ~/.ssh/id_old_nextcloud
       
       - name: Take the OLD instance out of maintenance mode if anything failed
         if: failure()
@@ -108,7 +108,6 @@ jobs:
   
   deploy:
     if: |
-      github.event_name == 'pull_request' ||
       (github.ref == 'refs/heads/dev' && github.event_name == 'push') ||
       (github.ref == 'refs/heads/dev' && github.event_name == 'workflow_dispatch') ||
       (github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'core')
@@ -204,7 +203,7 @@ jobs:
           EOF
           
       - name: Run Ansible
-        if: github.event.inputs.action != 'destroy'
+        if: github.event_name == 'push' || github.event.inputs.action == 'apply'
         working-directory: ansible
         env:
           FASTAPI_POSTGRES_DB:       ${{ vars.FASTAPI_POSTGRES_DB }}
@@ -239,3 +238,7 @@ jobs:
             -e "nextcloud_passwordsalt=$NEXTCLOUD_PASSWORDSALT" \
             -e "nextcloud_instanceid=$NEXTCLOUD_INSTANCEID" \
             -e "immich_db_password=$IMMICH_DB_PASSWORD"
+
+      - name: Remove key files written by this job
+        if: always()
+        run: shred -u ~/.ssh/id_ed25519_infra ansible/files/id_ed25519_github || rm -f ~/.ssh/id_ed25519_infra ansible/files/id_ed25519_github
