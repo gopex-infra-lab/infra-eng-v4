@@ -112,6 +112,6 @@ resource "proxmox_virtual_environment_vm" "core" {
 
   lifecycle {
     prevent_destroy = true
-    ignore_changes  = [disk, clone, initialization]
+    ignore_changes  = [disk, clone, initialization, cdrom, serial_device]
   }
 }
