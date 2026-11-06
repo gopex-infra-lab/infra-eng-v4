@@ -35,15 +35,6 @@ resource "null_resource" "upload_snippet" {
   }
 }
 
-# Forget the old Telmate resource in state without touching the real VM.
-removed {
-  from = proxmox_vm_qemu.core
-
-  lifecycle {
-    destroy = false
-  }
-}
-
 resource "proxmox_virtual_environment_vm" "core" {
   name      = var.vm_name
   node_name = var.target_node
