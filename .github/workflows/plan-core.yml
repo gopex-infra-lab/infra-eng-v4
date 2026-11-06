@@ -11,11 +11,6 @@ on:
         options:
           - core-infra
           - lab
-      forget_telmate_state:
-        description: "ONE-TIME: back up the state, then forget the 3 old Telmate VM entries (VMs untouched)"
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -46,24 +41,48 @@ jobs:
         working-directory: ${{ github.event.inputs.environment }}
         run: terraform init -input=false
 
-      - name: Forget old Telmate VM entries in state (one-time)
-        if: github.event.inputs.forget_telmate_state == 'true' && github.event.inputs.environment == 'core-infra'
+      - name: Forget old Telmate VM entries in state (idempotent, state only)
+        if: github.event.inputs.environment == 'core-infra'
         working-directory: core-infra
         run: |
           set -euo pipefail
           S=/mnt/pve/nas/terraform-state/proxmox-core-v3.tfstate
-          cp -a "$S" "$S.pre-forget-$(date +%Y%m%d-%H%M%S)"
           echo "--- before"
           terraform state list
-          for k in core-avelo core-immich core-nextcloud; do
-            terraform state rm "module.core[\"$k\"].proxmox_vm_qemu.core"
-          done
+          OLD=$(terraform state list | grep 'proxmox_vm_qemu' || true)
+          if [ -z "$OLD" ]; then
+            echo "nothing to forget"
+          else
+            cp -a "$S" "$S.pre-forget-$(date +%Y%m%d-%H%M%S)"
+            while read -r addr; do
+              terraform state rm "$addr" < /dev/null
+            done <<< "$OLD"
+          fi
           echo "--- after"
           terraform state list
 
       - name: Terraform plan (read-only)
         working-directory: ${{ github.event.inputs.environment }}
-        run: terraform plan -input=false -lock-timeout=60s -out=tfplan
+        run: terraform plan -no-color -input=false -lock-timeout=60s -out=tfplan
+
+      - name: Summary of Proxmox changes only
+        if: always()
+        working-directory: ${{ github.event.inputs.environment }}
+        run: |
+          if [ ! -f tfplan ]; then echo "no plan file"; exit 0; fi
+          terraform show -json tfplan | python3 -c '
+          import json,sys
+          p=json.load(sys.stdin)
+          for c in p.get("resource_changes",[]):
+              ch=c["change"]
+              print(c["address"], ch["actions"], "IMPORT" if ch.get("importing") else "")
+              if c["type"].startswith("proxmox_"):
+                  b=ch.get("before") or {}
+                  a=ch.get("after") or {}
+                  for k in sorted(set(b)|set(a)):
+                      if b.get(k)!=a.get(k):
+                          print("    ", k, ":", json.dumps(b.get(k)), "->", json.dumps(a.get(k)))
+          '
 
       - name: Fail if the plan deletes or replaces a Proxmox resource
         working-directory: ${{ github.event.inputs.environment }}
