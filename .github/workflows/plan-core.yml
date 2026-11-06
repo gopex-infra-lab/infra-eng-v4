@@ -11,6 +11,11 @@ on:
         options:
           - core-infra
           - lab
+      forget_telmate_state:
+        description: "ONE-TIME: back up the state, then forget the 3 old Telmate VM entries (VMs untouched)"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -40,6 +45,21 @@ jobs:
       - name: Terraform init
         working-directory: ${{ github.event.inputs.environment }}
         run: terraform init -input=false
+
+      - name: Forget old Telmate VM entries in state (one-time)
+        if: github.event.inputs.forget_telmate_state == 'true' && github.event.inputs.environment == 'core-infra'
+        working-directory: core-infra
+        run: |
+          set -euo pipefail
+          S=/mnt/pve/nas/terraform-state/proxmox-core-v3.tfstate
+          cp -a "$S" "$S.pre-forget-$(date +%Y%m%d-%H%M%S)"
+          echo "--- before"
+          terraform state list
+          for k in core-avelo core-immich core-nextcloud; do
+            terraform state rm "module.core[\"$k\"].proxmox_vm_qemu.core"
+          done
+          echo "--- after"
+          terraform state list
 
       - name: Terraform plan (read-only)
         working-directory: ${{ github.event.inputs.environment }}
