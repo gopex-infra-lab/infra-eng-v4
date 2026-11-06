@@ -11,11 +11,6 @@ on:
         options:
           - core-infra
           - lab
-      confirm_apply:
-        description: "type REBOOT-FLAG-ONLY to apply a plan that changes only reboot_after_update (blank = plan only)"
-        required: false
-        default: ""
-        type: string
 
 permissions:
   contents: read
@@ -73,46 +68,6 @@ jobs:
         working-directory: ${{ github.event.inputs.environment }}
         run: |
           terraform show -json tfplan | python3 -c 'import json,sys; p=json.load(sys.stdin); bad=[(c["address"],c["change"]["actions"]) for c in p.get("resource_changes",[]) if c["type"].startswith("proxmox_") and "delete" in c["change"]["actions"]]; print("BLOCKED", bad) if bad else print("ok: no delete or replace on proxmox resources"); sys.exit(1 if bad else 0)'
-
-      - name: Guard (only the reboot_after_update flag may change)
-        if: github.event.inputs.confirm_apply == 'REBOOT-FLAG-ONLY' && github.event.inputs.environment == 'core-infra'
-        working-directory: core-infra
-        run: |
-          terraform show -json tfplan | python3 -c '
-          import json,sys
-          p=json.load(sys.stdin)
-          bad=[]
-          for c in p.get("resource_changes",[]):
-              t=c["type"]; a=c["change"]["actions"]
-              if t.startswith("proxmox_"):
-                  if a==["no-op"]:
-                      continue
-                  if a==["update"]:
-                      b=c["change"].get("before") or {}
-                      af=c["change"].get("after") or {}
-                      ch=[k for k in set(b)|set(af) if b.get(k)!=af.get(k)]
-                      if set(ch)<={"reboot_after_update"}:
-                          continue
-                      bad.append((c["address"],a,ch))
-                  else:
-                      bad.append((c["address"],a))
-              elif t=="null_resource":
-                  if a!=["no-op"]: bad.append((c["address"],a))
-              elif t=="local_file":
-                  if a not in (["create"],["no-op"]): bad.append((c["address"],a))
-              else:
-                  bad.append((c["address"],a))
-          print("GUARD BLOCKED", bad) if bad else print("guard ok: only the reboot_after_update flag changes")
-          sys.exit(1 if bad else 0)
-          '
-
-      - name: Apply the saved plan (guarded)
-        if: github.event.inputs.confirm_apply == 'REBOOT-FLAG-ONLY' && github.event.inputs.environment == 'core-infra'
-        working-directory: core-infra
-        run: |
-          terraform apply -input=false -no-color tfplan
-          echo "--- state after"
-          terraform state list
 
       - name: Remove the plan file
         if: always()
