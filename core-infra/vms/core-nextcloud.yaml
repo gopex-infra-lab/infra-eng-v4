@@ -8,3 +8,5 @@ onboot: true
 ip: 192.168.0.249
 ipconfig0: ip=192.168.0.249/24,gw=192.168.0.252
 role: ["all", "nextcloud"]
+vm_id: 101
+mac_address: "2E:24:D8:62:BD:D7"

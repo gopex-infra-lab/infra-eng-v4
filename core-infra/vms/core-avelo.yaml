@@ -8,3 +8,5 @@ onboot: false
 ip: 192.168.0.187
 ipconfig0: ip=192.168.0.187/24,gw=192.168.0.252
 role: ["all", "avelo_app"]
+vm_id: 109
+started: false

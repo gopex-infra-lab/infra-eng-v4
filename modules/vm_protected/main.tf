@@ -1,3 +1,8 @@
+locals {
+  ip_cidr = regex("ip=([^,]+)", var.ipconfig0)[0]
+  ip_gw   = try(regex("gw=([^,]+)", var.ipconfig0)[0], null)
+}
+
 resource "local_file" "cloud_init" {
   filename = "${path.module}/generated/${var.vm_name}.yml"
 
@@ -30,45 +35,83 @@ resource "null_resource" "upload_snippet" {
   }
 }
 
-resource "proxmox_vm_qemu" "core" {
-  name        = var.vm_name
-  target_node = var.target_node
-  clone       = var.template_name
+# Forget the old Telmate resource in state without touching the real VM.
+removed {
+  from = proxmox_vm_qemu.core
 
-  cores       = var.cpu_cores
-  memory      = var.memory_mb
-  hotplug     = "network,disk,usb,cpu,memory"
-  numa        = true
-  onboot      = var.onboot
+  lifecycle {
+    destroy = false
+  }
+}
 
-  network {
-    model    = "virtio"
-    bridge   = "vmbr0"
-    firewall = true
+resource "proxmox_virtual_environment_vm" "core" {
+  name      = var.vm_name
+  node_name = var.target_node
+  vm_id     = var.vm_id
+
+  on_boot             = var.onboot
+  started             = var.started
+  machine             = var.machine
+  scsi_hardware       = "lsi"
+  boot_order          = ["scsi0"]
+  hotplug             = "network,disk,usb,cpu,memory"
+  tablet_device       = true
+  reboot_after_update = false
+
+  agent {
+    enabled = true
+
+    wait_for_ip {
+      disabled = true
+    }
   }
 
-  ipconfig0  = var.ipconfig0
-  nameserver = "192.168.0.252"
-  agent      = 1
+  cpu {
+    type    = "host"
+    cores   = var.cpu_cores
+    sockets = 1
+    numa    = true
+  }
 
-  cicustom   = "user=local:snippets/${var.vm_name}.yml"
-  full_clone = var.full_clone
+  memory {
+    dedicated = var.memory_mb
+  }
 
-  additional_wait = 15
+  network_device {
+    bridge      = "vmbr0"
+    model       = "virtio"
+    firewall    = true
+    mac_address = var.mac_address
+  }
 
-  depends_on = [
-    null_resource.upload_snippet
-  ]
+  operating_system {
+    type = "l26"
+  }
 
-  qemu_os = "l26"
+  initialization {
+    user_data_file_id = "local:snippets/${var.vm_name}.yml"
 
-  bootdisk = "scsi0"
-  boot     = "order=scsi0"
+    dns {
+      servers = ["192.168.0.252"]
+    }
+
+    ip_config {
+      ipv4 {
+        address = local.ip_cidr
+        gateway = local.ip_gw
+      }
+    }
+  }
+
+  clone {
+    vm_id = var.template_vm_id
+    full  = var.full_clone
+  }
+
+  depends_on = [null_resource.upload_snippet]
 
   lifecycle {
     prevent_destroy = true
-    ignore_changes = [
-      disk
-    ]
+    ignore_changes  = [disk, clone, initialization]
   }
 }
