@@ -79,3 +79,28 @@ variable "onboot" {
   type    = bool
   default = false
 }
+variable "vm_id" {
+  description = "Proxmox VM ID"
+  type        = number
+}
+
+variable "template_vm_id" {
+  description = "VM ID of the template to clone from"
+  type        = number
+  default     = 102
+}
+
+variable "mac_address" {
+  type    = string
+  default = null
+}
+
+variable "machine" {
+  type    = string
+  default = "q35"
+}
+
+variable "started" {
+  type    = bool
+  default = true
+}

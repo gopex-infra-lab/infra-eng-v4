@@ -43,7 +43,26 @@ jobs:
 
       - name: Terraform plan (read-only)
         working-directory: ${{ github.event.inputs.environment }}
-        run: terraform plan -input=false -lock-timeout=60s -out=tfplan
+        run: terraform plan -no-color -input=false -lock-timeout=60s -out=tfplan
+
+      - name: Summary of Proxmox changes only
+        if: always()
+        working-directory: ${{ github.event.inputs.environment }}
+        run: |
+          if [ ! -f tfplan ]; then echo "no plan file"; exit 0; fi
+          terraform show -json tfplan | python3 -c '
+          import json,sys
+          p=json.load(sys.stdin)
+          for c in p.get("resource_changes",[]):
+              ch=c["change"]
+              print(c["address"], ch["actions"], "IMPORT" if ch.get("importing") else "")
+              if c["type"].startswith("proxmox_"):
+                  b=ch.get("before") or {}
+                  a=ch.get("after") or {}
+                  for k in sorted(set(b)|set(a)):
+                      if b.get(k)!=a.get(k):
+                          print("    ", k, ":", json.dumps(b.get(k)), "->", json.dumps(a.get(k)))
+          '
 
       - name: Fail if the plan deletes or replaces a Proxmox resource
         working-directory: ${{ github.event.inputs.environment }}
