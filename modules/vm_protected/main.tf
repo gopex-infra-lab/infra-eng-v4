@@ -56,14 +56,9 @@ resource "proxmox_virtual_environment_vm" "core" {
   boot_order          = ["scsi0"]
   hotplug             = "network,disk,usb,cpu,memory"
   tablet_device       = true
-  reboot_after_update = false
 
   agent {
     enabled = true
-
-    wait_for_ip {
-      disabled = true
-    }
   }
 
   cpu {

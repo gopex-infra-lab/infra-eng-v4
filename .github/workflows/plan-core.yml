@@ -11,6 +11,11 @@ on:
         options:
           - core-infra
           - lab
+      confirm_apply:
+        description: "type IMPORT-ONLY to apply a plan that only imports the VMs (blank = plan only)"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -88,6 +93,36 @@ jobs:
         working-directory: ${{ github.event.inputs.environment }}
         run: |
           terraform show -json tfplan | python3 -c 'import json,sys; p=json.load(sys.stdin); bad=[(c["address"],c["change"]["actions"]) for c in p.get("resource_changes",[]) if c["type"].startswith("proxmox_") and "delete" in c["change"]["actions"]]; print("BLOCKED", bad) if bad else print("ok: no delete or replace on proxmox resources"); sys.exit(1 if bad else 0)'
+
+      - name: Import-only guard (refuses anything but imports and local files)
+        if: github.event.inputs.confirm_apply == 'IMPORT-ONLY' && github.event.inputs.environment == 'core-infra'
+        working-directory: core-infra
+        run: |
+          terraform show -json tfplan | python3 -c '
+          import json,sys
+          p=json.load(sys.stdin)
+          bad=[]
+          for c in p.get("resource_changes",[]):
+              t=c["type"]; a=c["change"]["actions"]
+              if t.startswith("proxmox_"):
+                  if a!=["no-op"]: bad.append((c["address"],a))
+              elif t=="null_resource":
+                  if a!=["no-op"]: bad.append((c["address"],a))
+              elif t=="local_file":
+                  if a not in (["create"],["no-op"]): bad.append((c["address"],a))
+              else:
+                  bad.append((c["address"],a))
+          print("GUARD BLOCKED", bad) if bad else print("guard ok: imports and local files only")
+          sys.exit(1 if bad else 0)
+          '
+
+      - name: Apply the saved plan (import only)
+        if: github.event.inputs.confirm_apply == 'IMPORT-ONLY' && github.event.inputs.environment == 'core-infra'
+        working-directory: core-infra
+        run: |
+          terraform apply -input=false -no-color tfplan
+          echo "--- state after"
+          terraform state list
 
       - name: Remove the plan file
         if: always()
