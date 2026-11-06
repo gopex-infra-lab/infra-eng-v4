@@ -104,3 +104,9 @@ variable "started" {
   type    = bool
   default = true
 }
+
+variable "reboot_after_update" {
+  description = "Allow the provider to reboot the VM when an update needs it"
+  type        = bool
+  default     = true
+}

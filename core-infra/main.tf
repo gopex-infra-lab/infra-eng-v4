@@ -19,6 +19,7 @@ module "core" {
   machine        = try(each.value.machine, "q35")
   started        = try(each.value.started, true)
   template_vm_id = try(each.value.template_vm_id, 102)
+  reboot_after_update = try(each.value.reboot_after_update, true)
 
   # keep your current keys
   infra_public_key  = var.infra_public_key
