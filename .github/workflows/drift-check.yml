@@ -1,0 +1,49 @@
+name: Drift check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: [core-infra, lab]
+    concurrency:
+      group: terraform-state-${{ matrix.dir }}
+      cancel-in-progress: false
+    env:
+      TF_VAR_pm_api_url: ${{ secrets.PM_API_URL }}
+      TF_VAR_pm_api_token_id: ${{ secrets.PM_API_TOKEN_ID }}
+      TF_VAR_pm_api_token_secret: ${{ secrets.PM_API_TOKEN_SECRET }}
+      TF_VAR_infra_public_key: ${{ secrets.INFRA_PUBLIC_KEY }}
+      TF_VAR_infra_private_key: ${{ secrets.INFRA_PRIVATE_KEY }}
+      TF_VAR_ansible_user: ${{ secrets.TF_VAR_ANSIBLE_USER }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: ${{ matrix.dir }}
+        run: terraform init -input=false
+
+      - name: Terraform plan (a failed plan fails the job)
+        working-directory: ${{ matrix.dir }}
+        run: terraform plan -input=false -no-color -lock-timeout=60s -out=tfplan
+
+      - name: Evaluate drift
+        working-directory: ${{ matrix.dir }}
+        run: terraform show -json tfplan | python3 ../tools/tf_drift_check.py
+
+      - name: Remove the plan file
+        if: always()
+        working-directory: ${{ matrix.dir }}
+        run: rm -f tfplan
