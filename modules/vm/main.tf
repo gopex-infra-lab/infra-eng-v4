@@ -1,10 +1,14 @@
+locals {
+  ip_cidr = regex("ip=([^,]+)", var.ipconfig0)[0]
+  ip_gw   = try(regex("gw=([^,]+)", var.ipconfig0)[0], null)
+}
+
 resource "local_file" "cloud_init" {
   filename = "${path.module}/generated/${var.vm_name}.yml"
 
   content = templatefile("${path.module}/cloud-init.tftpl", {
     hostname         = var.vm_name
     infra_public_key = var.infra_public_key
-    git_private_key  = var.git_private_key
   })
 }
 
@@ -30,40 +34,73 @@ resource "null_resource" "upload_snippet" {
   }
 }
 
-resource "proxmox_vm_qemu" "lab_vm" {
-  name        = var.vm_name
-  target_node = var.target_node
-  clone       = var.template_name
+resource "proxmox_virtual_environment_vm" "lab_vm" {
+  name      = var.vm_name
+  node_name = var.target_node
+  vm_id     = var.vm_id
 
-  cores  = var.cpu_cores
-  memory = var.memory_mb
-  onboot = var.onboot
-  network {
-    model    = "virtio"
+  on_boot         = var.onboot
+  started         = var.started
+  machine         = var.machine
+  scsi_hardware   = "virtio-scsi-pci"
+  boot_order      = ["scsi0"]
+  tablet_device   = true
+  stop_on_destroy = true
+
+  agent {
+    enabled = true
+
+    wait_for_ip {
+      disabled = true
+    }
+  }
+
+  cpu {
+    type    = "host"
+    cores   = var.cpu_cores
+    sockets = 1
+  }
+
+  memory {
+    dedicated = var.memory_mb
+  }
+
+  network_device {
     bridge   = "vmbr0"
+    model    = "virtio"
     firewall = true
   }
 
-  ipconfig0  = var.ipconfig0
-  nameserver = "192.168.0.252"
-  agent      = 1
+  operating_system {
+    type = "l26"
+  }
 
-  cicustom   = "user=local:snippets/${var.vm_name}.yml"
-  full_clone = var.full_clone
+  initialization {
+    datastore_id      = "nas"
+    interface         = "ide0"
+    user_data_file_id = "local:snippets/${var.vm_name}.yml"
 
-  depends_on = [
-    null_resource.upload_snippet
-  ]
+    dns {
+      servers = ["192.168.0.252"]
+    }
 
-  qemu_os = "l26"
+    ip_config {
+      ipv4 {
+        address = local.ip_cidr
+        gateway = local.ip_gw
+      }
+    }
+  }
 
-  bootdisk = "scsi0"
-  boot     = "order=scsi0"
+  clone {
+    vm_id = var.template_vm_id
+    full  = var.full_clone
+  }
+
+  depends_on = [null_resource.upload_snippet]
 
   lifecycle {
     prevent_destroy = false
-    ignore_changes = [
-      disk
-    ]
+    ignore_changes  = [disk, clone, initialization, cdrom, serial_device]
   }
 }
