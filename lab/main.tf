@@ -14,6 +14,10 @@ module "lab_vm" {
 
   template_name = each.value.template_name
   full_clone    = each.value.full_clone
+  vm_id          = try(each.value.vm_id, null)
+  machine        = try(each.value.machine, "q35")
+  started        = try(each.value.started, true)
+  template_vm_id = try(each.value.template_vm_id, 102)
 
   # keep your current keys
   infra_public_key  = var.infra_public_key
