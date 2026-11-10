@@ -59,6 +59,7 @@ resource "proxmox_virtual_environment_vm" "lab_vm" {
     type    = "host"
     cores   = var.cpu_cores
     sockets = 1
+    numa    = true
   }
 
   memory {
