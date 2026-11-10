@@ -7,4 +7,4 @@ onboot: false
 ip: 192.168.0.199
 ipconfig0: ip=192.168.0.199/24,gw=192.168.0.252
 role: ["all"]
-vm_id: 9101
+vm_id: 9102
