@@ -45,6 +45,7 @@ resource "proxmox_virtual_environment_vm" "lab_vm" {
   scsi_hardware   = "virtio-scsi-pci"
   boot_order      = ["scsi0"]
   tablet_device   = true
+  hotplug         = "network,disk,usb,cpu"
   stop_on_destroy = true
 
   agent {
